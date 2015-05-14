@@ -134,12 +134,44 @@ object DatabricksPlugin extends AutoPlugin {
     val allClusters = dbcFetchClusters.value
     Def.task {
       for (clusterName <- onClusters) {
-        val givenCluster = allClusters.find(_.name == clusterName).get
-        // Fix use of get here - simple map may work and need to handle failure
-        val contextId = client.createContext(language, givenCluster)
-        val contextStatus = client.checkContext(contextId, givenCluster)
-        client.destroyContext(contextId, givenCluster)
+        // Duplicating aspects of code in DatabricksHttp.foreachCluster
+        // - this is due to inability to pass values between DatabricksHttp function
+        // calls within the foreachCluster
+        val givenCluster = allClusters.find(_.name == clusterName)
+        if (givenCluster.isEmpty) {
+          throw new NoSuchElementException(s"Cluster with name: '${clusterName} not found!")
+        }
+        val confirmedCluster = givenCluster.get
+        // parameterize the code / command that is issued here
+        // Attempt to create an execution context on the relevant cluster
+        var contextCorrect = false
+        val contextId = client.createContext(language, confirmedCluster)
+        while (!contextCorrect) {
+          val contextStatus = client.checkContext(contextId, confirmedCluster)
+          if (contextStatus.status == "Running") {
+            contextCorrect = true
+          } else if (contextStatus.status == "Error") {
+            client.destroyContext(contextId, confirmedCluster)
+            throw new Exception(s"The Execution Context '${contextId.id} returned an error. Terminated context")
+          }
+        }
 
+        // Attempt to issue a command
+        val commandId = client.executeCommand(language, confirmedCluster, contextId, "sc.parallelize(1 to 10).collect")
+        var commandComplete = false
+        while (!commandComplete) {
+          val commandStatus = client.checkCommand(confirmedCluster, contextId, commandId)
+          if (commandStatus.status == "Finished") {
+            commandComplete = true
+          } else if (commandStatus.status == "Error") {
+            client.cancelCommand(confirmedCluster, contextId, commandId)
+            client.destroyContext(contextId, confirmedCluster)
+            throw new Exception(s"The command '${commandId.id} returned an error. Cancelled command and terminated context")
+          } else {
+            Thread sleep 3000
+          }
+        }
+        client.destroyContext(contextId, confirmedCluster)
       }
 
     }
@@ -206,3 +238,7 @@ case class LibraryStatus(
 case class LibraryClusterStatus(clusterId: String, status: String)
 case class ContextId(id: String)
 case class ContextStatus(status: String, id: String)
+case class CommandId(id: String)
+// This handles only text results - not table results - adjust
+case class CommandResults(resultType: String, data: String)
+case class CommandStatus(status: String, id: String, results: CommandResults)

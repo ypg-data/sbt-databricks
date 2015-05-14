@@ -192,6 +192,84 @@ private[sbtdatabricks] class DatabricksHttp(endpoint: String, client: HttpClient
     mapper.readValue[ContextId](responseString)
   }
 
+
+  /**
+   * Issue and execute a command
+   * @param language the relevant coding language
+   * @param cluster the relevant cluster within which the context will be created
+   * @param contextId The id of the execution context
+   * @param command The code to be executed on the cluster
+   * @return The id of the command
+   *
+   */
+  private[sbtdatabricks] def executeCommand(
+      language: String,
+      cluster: Cluster,
+      contextId: ContextId,
+      command: String): CommandId = {
+    println(s"Executing '${language}' command on cluster '${cluster.name}'")
+    val post = new HttpPost(endpoint + COMMAND_EXECUTE)
+    val form = new StringEntity(s"""{"language":"${language}","clusterId":"${cluster.id}","contextId":"${contextId.id}","command":"${command}"}""")
+    form.setContentType("application/json")
+    post.setEntity(form)
+    val response = client.execute(post)
+    val handler = new BasicResponseHandler()
+    val responseString = handler.handleResponse(response).trim
+    println(s"Received the following response: '${responseString}'")
+    mapper.readValue[CommandId](responseString)
+  }
+
+  /**
+   * Check the status of a command
+   * @param language the relevant coding language
+   * @param cluster the relevant cluster within which the context will be created
+   * @param contextId The id of the execution context
+   * @param command The code to be executed on the cluster
+   * @return The status of the command
+   *
+   */
+  private[sbtdatabricks] def checkCommand(
+      cluster: Cluster,
+      contextId: ContextId,
+      commandId: CommandId): CommandStatus = {
+    println(s"Checking status of command '${commandId.id}' on cluster '${cluster.name}'")
+    val form =
+      URLEncodedUtils.format(List(new BasicNameValuePair("clusterId", cluster.id),
+                                  new BasicNameValuePair("contextId", contextId.id),
+                                  new BasicNameValuePair("commandId", commandId.id)), "utf-8")
+    val request = new HttpGet(endpoint + COMMAND_STATUS + "?" + form)
+    val response = client.execute(request)
+    val handler = new BasicResponseHandler()
+    val responseString = handler.handleResponse(response).trim
+    println(s"Received the following response: '${responseString}'")
+    mapper.readValue[CommandStatus](responseString)
+  }
+
+  /**
+   * Cancel a command
+   * @param language the relevant coding language
+   * @param cluster the relevant cluster within which the context will be created
+   * @param contextId The id of the execution context
+   * @param command The code to be executed on the cluster
+   * @return The id of the command
+   *
+   */
+  private[sbtdatabricks] def cancelCommand(
+      cluster: Cluster,
+      contextId: ContextId,
+      commandId: CommandId): CommandId = {
+    println(s"Cancelling command '${commandId.id}' on cluster '${cluster.name}'")
+    val post = new HttpPost(endpoint + COMMAND_CANCEL)
+    val form = new StringEntity(s"""{"clusterId":"${cluster.id}","contextId":"${contextId.id}","commandId":"${commandId.id}"}""")
+    form.setContentType("application/json")
+    post.setEntity(form)
+    val response = client.execute(post)
+    val handler = new BasicResponseHandler()
+    val responseString = handler.handleResponse(response).trim
+    println(s"Received the following response: '${responseString}'")
+    mapper.readValue[CommandId](responseString)
+  }
+
   /**
    * Refactored to take a tuple so that we can reuse foreachCluster.
    * @param library The metadata of the uploaded library
