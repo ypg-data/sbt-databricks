@@ -53,7 +53,7 @@ private[sbtdatabricks] class DatabricksHttp(endpoint: String, client: HttpClient
   }
 
   /**
-   * Deletes the given Library on Databricks Cloud 
+   * Deletes the given Library on Databricks Cloud
    * @param libraryId the id for the library
    * @return The response from Databricks Cloud, i.e. the libraryId
    */
@@ -79,9 +79,9 @@ private[sbtdatabricks] class DatabricksHttp(endpoint: String, client: HttpClient
   }
 
   /**
-   * Get the status of the Library 
+   * Get the status of the Library
    * @param libraryId the id of the Library
-   * @return Information on the status of the Library, which clusters it is attached to, 
+   * @return Information on the status of the Library, which clusters it is attached to,
    *         files, etc...
    */
   private[sbtdatabricks] def getLibraryStatus(libraryId: String): LibraryStatus = {
@@ -102,7 +102,7 @@ private[sbtdatabricks] class DatabricksHttp(endpoint: String, client: HttpClient
    * @return Whether an older version of the library is attached to the given clusters
    */
   private[sbtdatabricks] def isOldVersionAttached(
-      lib: UploadedLibrary, 
+      lib: UploadedLibrary,
       clusters: Seq[Cluster],
       onClusters: Seq[ClusterName]): Boolean = {
     val status = getLibraryStatus(lib.id)
@@ -132,6 +132,64 @@ private[sbtdatabricks] class DatabricksHttp(endpoint: String, client: HttpClient
     // sure that the function returned a value and the future operations of `deploy` depend on
     // this method
     true
+  }
+
+  /**
+   * Create an execution context
+   * @param language the relevant coding language
+   * @param cluster the relevant cluster within which the context will be created
+   * @return The id of the execution context
+   *
+   */
+  private[sbtdatabricks] def createContext(language: String, cluster: Cluster): ContextId = {
+    println(s"Creating '${language}' execution context on cluster '${cluster.name}'")
+    val post = new HttpPost(endpoint + CONTEXT_CREATE)
+    val form = new StringEntity(s"""{"language":"${language}","clusterId":"${cluster.id}"}""")
+    form.setContentType("application/json")
+    post.setEntity(form)
+    val response = client.execute(post)
+    val handler = new BasicResponseHandler()
+    val responseString = handler.handleResponse(response).trim
+    println(s"Received the following response: '${responseString}'")
+    mapper.readValue[ContextId](responseString)
+  }
+
+  /**
+   * Check status of an execution context
+   * @param contextId Contains the id of the execution context
+   * @param cluster the relevant cluster
+   * @return status of the execution context
+   */
+  private[sbtdatabricks] def checkContext(contextId: ContextId, cluster: Cluster): ContextStatus = {
+    println(s"Checking execution context '${contextId.id}' on cluster '${cluster.name}'")
+    val form =
+      URLEncodedUtils.format(List(new BasicNameValuePair("clusterId", cluster.id),
+                                  new BasicNameValuePair("contextId", contextId.id)), "utf-8")
+    val request = new HttpGet(endpoint + CONTEXT_STATUS + "?" + form)
+    val response = client.execute(request)
+    val handler = new BasicResponseHandler()
+    val responseString = handler.handleResponse(response).trim
+    println(s"Received the following response: '${responseString}'")
+    mapper.readValue[ContextStatus](responseString)
+  }
+
+  /**
+   * Destroy an execution context
+   * @param contextId Contains the id of the execution context
+   * @param cluster the relevant cluster
+   * @return the id of the execution context
+   */
+  private[sbtdatabricks] def destroyContext(contextId: ContextId, cluster: Cluster): ContextId = {
+    println(s"Terminating execution context '${contextId.id}' on cluster '${cluster.name}'")
+    val post = new HttpPost(endpoint + CONTEXT_DESTROY)
+    val form = new StringEntity(s"""{"clusterId":"${cluster.id}","contextId":"${contextId.id}"}""")
+    form.setContentType("application/json")
+    post.setEntity(form)
+    val response = client.execute(post)
+    val handler = new BasicResponseHandler()
+    val responseString = handler.handleResponse(response).trim
+    println(s"Received the following response: '${responseString}'")
+    mapper.readValue[ContextId](responseString)
   }
 
   /**
@@ -186,19 +244,19 @@ private[sbtdatabricks] class DatabricksHttp(endpoint: String, client: HttpClient
     form.setContentType("application/json")
     post.setEntity(form)
     val response = client.execute(post)
-    val handler = new org.apache.http.impl.client.BasicResponseHandler()
+    val handler = new BasicResponseHandler()
     handler.handleResponse(response)
   }
 
   /**
-   * Helper method to handle cluster related functions, 
+   * Helper method to handle cluster related functions,
    * and handle the special 'ALL_CLUSTERS' option.
    * @param onClusters The clusters to invoke the function on
    * @param allClusters The list of all clusters, which the user has access to
    * @param f The function to perform on the cluster
    */
   private[sbtdatabricks] def foreachCluster(
-      onClusters: Seq[String], 
+      onClusters: Seq[String],
       allClusters: Seq[Cluster])(f: Cluster => Unit): Unit = {
     assert(onClusters.nonEmpty, "Please specify a cluster.")
     val hasAllClusters = onClusters.find(_ == "ALL_CLUSTERS")
@@ -221,7 +279,7 @@ private[sbtdatabricks] class DatabricksHttp(endpoint: String, client: HttpClient
 }
 
 object DatabricksHttp {
-  
+
   /** Create an SSL client to handle communication. */
   private[sbtdatabricks] def getApiClient(username: String, password: String): HttpClient = {
 
@@ -242,13 +300,13 @@ object DatabricksHttp {
   }
 
   private[sbtdatabricks] def apply(
-      endpoint: String, 
-      username: String, 
+      endpoint: String,
+      username: String,
       password: String): DatabricksHttp = {
     val cli = DatabricksHttp.getApiClient(username, password)
     new DatabricksHttp(endpoint, cli)
   }
-  
+
 }
 
 private[sbtdatabricks] object DBApiEndpoints {

@@ -5,11 +5,11 @@ import Keys._
 import scala.collection.mutable.{HashMap => MutHashMap, MultiMap => MutMultiMap, Set => MutSet}
 
 object DatabricksPlugin extends AutoPlugin {
-  
+
   type LibraryName = String
   type ClusterName = String
   type LibraryMap = MutHashMap[LibraryName, MutSet[LibraryListResult]] with MutMultiMap[LibraryName, LibraryListResult]
-  
+
   object autoImport {
 
     val dbcUpload = taskKey[Seq[UploadedLibrary]]("Upload your jar to Databricks Cloud as a Library.")
@@ -24,6 +24,8 @@ object DatabricksPlugin extends AutoPlugin {
     val dbcLibraryPath = settingKey[String]("Where in the workspace to add the libraries.")
     val dbcListClusters = taskKey[Unit]("List all available clusters and their states.")
     val dbcRestartClusters = taskKey[Unit]("Restart the given clusters.")
+    val dbcExecuteCommand = taskKey[Unit]("Execute a command on a particular cluster")
+    val dbcExecutionLanguage = settingKey[String]("Which language is to be used when executing a command")
 
     val dbcApiUrl = settingKey[String]("The URL for the DB API endpoint")
     val dbcUsername = settingKey[String]("The username for Databricks Cloud")
@@ -33,10 +35,10 @@ object DatabricksPlugin extends AutoPlugin {
   import autoImport._
 
   private val dbcApiClient = taskKey[DatabricksHttp]("Create client to handle SSL communication.")
-  
+
   override def requires = plugins.JvmPlugin
   override def trigger = allRequirements
-  
+
   private lazy val dbcFetchLibraries: Def.Initialize[Task[LibraryMap]] = Def.task {
     val libs = dbcApiClient.value.fetchLibraries
     val m = new MutHashMap[String, MutSet[LibraryListResult]] with MutMultiMap[String, LibraryListResult]
@@ -64,14 +66,14 @@ object DatabricksPlugin extends AutoPlugin {
       }
     }.flatMap(c => c)
   }
-  
+
   private lazy val dbcClasspath = Def.task {
     ((Keys.`package` in Compile).value +: (managedClasspath in Runtime).value.files
       ).filterNot(_.getName startsWith "scala-")
   }
 
   private val dbcFetchClusters = taskKey[Seq[Cluster]]("Fetch all available clusters.")
-  
+
   private lazy val uploadImpl: Def.Initialize[Task[Seq[UploadedLibrary]]] = Def.taskDyn {
     val client = dbcApiClient.value
     val folder = dbcLibraryPath.value
@@ -124,7 +126,25 @@ object DatabricksPlugin extends AutoPlugin {
       }
     }
   }
-  
+
+  private lazy val executeCommandImpl: Def.Initialize[Task[Unit]] = Def.taskDyn {
+    val client = dbcApiClient.value
+    val language = dbcExecutionLanguage.value
+    val onClusters = dbcClusters.value
+    val allClusters = dbcFetchClusters.value
+    Def.task {
+      for (clusterName <- onClusters) {
+        val givenCluster = allClusters.find(_.name == clusterName).get
+        // Fix use of get here - simple map may work and need to handle failure
+        val contextId = client.createContext(language, givenCluster)
+        val contextStatus = client.checkContext(contextId, givenCluster)
+        client.destroyContext(contextId, givenCluster)
+
+      }
+
+    }
+  }
+
   val baseDBCSettings: Seq[Setting[_]] = Seq(
     dbcClusters := Seq.empty[String],
     dbcRestartOnAttach := true,
@@ -153,11 +173,12 @@ object DatabricksPlugin extends AutoPlugin {
         client.foreachCluster(onClusters, allClusters)(client.attachToCluster(lib, _))
       }
     },
-    dbcDeploy := deployImpl.value
+    dbcDeploy := deployImpl.value,
+    dbcExecuteCommand := executeCommandImpl.value
   )
 
   override lazy val projectSettings: Seq[Setting[_]] = baseDBCSettings
-  
+
 }
 
 case class UploadedLibraryId(id: String)
@@ -183,3 +204,5 @@ case class LibraryStatus(
     attachAllClusters: Boolean,
     statuses: List[LibraryClusterStatus])
 case class LibraryClusterStatus(clusterId: String, status: String)
+case class ContextId(id: String)
+case class ContextStatus(status: String, id: String)
