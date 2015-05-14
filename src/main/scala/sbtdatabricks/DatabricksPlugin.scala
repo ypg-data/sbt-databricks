@@ -25,6 +25,7 @@ object DatabricksPlugin extends AutoPlugin {
     val dbcListClusters = taskKey[Unit]("List all available clusters and their states.")
     val dbcRestartClusters = taskKey[Unit]("Restart the given clusters.")
     val dbcExecuteCommand = taskKey[Unit]("Execute a command on a particular cluster")
+    val dbcCommandFile = settingKey[String]("Location of file containing the command to be executed")
     val dbcExecutionLanguage = settingKey[String]("Which language is to be used when executing a command")
 
     val dbcApiUrl = settingKey[String]("The URL for the DB API endpoint")
@@ -132,6 +133,7 @@ object DatabricksPlugin extends AutoPlugin {
     val language = dbcExecutionLanguage.value
     val onClusters = dbcClusters.value
     val allClusters = dbcFetchClusters.value
+    val commandFile = dbcCommandFile.value
     Def.task {
       for (clusterName <- onClusters) {
         // Duplicating aspects of code in DatabricksHttp.foreachCluster
@@ -157,7 +159,7 @@ object DatabricksPlugin extends AutoPlugin {
         }
 
         // Attempt to issue a command
-        val commandId = client.executeCommand(language, confirmedCluster, contextId, "sc.parallelize(1 to 10).collect")
+        val commandId = client.executeCommand(language, confirmedCluster, contextId, commandFile)
         var commandComplete = false
         while (!commandComplete) {
           val commandStatus = client.checkCommand(confirmedCluster, contextId, commandId)
@@ -173,7 +175,6 @@ object DatabricksPlugin extends AutoPlugin {
         }
         client.destroyContext(contextId, confirmedCluster)
       }
-
     }
   }
 

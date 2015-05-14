@@ -11,6 +11,8 @@ import org.apache.http.client.methods._
 import org.apache.http.client.utils.URLEncodedUtils
 import org.apache.http.conn.ssl.{SSLConnectionSocketFactory, TrustSelfSignedStrategy, SSLContextBuilder}
 import org.apache.http.entity.StringEntity
+import org.apache.http.entity.FileEntity
+import org.apache.http.entity.mime.MultipartEntity
 import org.apache.http.entity.mime.content.{FileBody, StringBody}
 import org.apache.http.impl.client.{BasicResponseHandler, HttpClients, BasicCredentialsProvider}
 import org.apache.http.message.BasicNameValuePair
@@ -39,7 +41,7 @@ private[sbtdatabricks] class DatabricksHttp(endpoint: String, client: HttpClient
       file: File,
       folder: String): UploadedLibraryId = {
     val post = new HttpPost(endpoint + LIBRARY_UPLOAD)
-    val entity = new org.apache.http.entity.mime.MultipartEntity()
+    val entity = new MultipartEntity()
 
     entity.addPart("name", new StringBody(name))
     entity.addPart("libType", new StringBody("scala"))
@@ -47,7 +49,7 @@ private[sbtdatabricks] class DatabricksHttp(endpoint: String, client: HttpClient
     entity.addPart("uri", new FileBody(file))
     post.setEntity(entity)
     val response = client.execute(post)
-    val handler = new org.apache.http.impl.client.BasicResponseHandler()
+    val handler = new BasicResponseHandler()
     val stringResponse = handler.handleResponse(response)
     mapper.readValue[UploadedLibraryId](stringResponse)
   }
@@ -62,7 +64,7 @@ private[sbtdatabricks] class DatabricksHttp(endpoint: String, client: HttpClient
     val form = List(new BasicNameValuePair("libraryId", libraryId))
     post.setEntity(new UrlEncodedFormEntity(form))
     val response = client.execute(post)
-    val handler = new org.apache.http.impl.client.BasicResponseHandler()
+    val handler = new BasicResponseHandler()
     handler.handleResponse(response)
   }
 
@@ -206,12 +208,17 @@ private[sbtdatabricks] class DatabricksHttp(endpoint: String, client: HttpClient
       language: String,
       cluster: Cluster,
       contextId: ContextId,
-      command: String): CommandId = {
+      commandFilePath: String): CommandId = {
     println(s"Executing '${language}' command on cluster '${cluster.name}'")
     val post = new HttpPost(endpoint + COMMAND_EXECUTE)
-    val form = new StringEntity(s"""{"language":"${language}","clusterId":"${cluster.id}","contextId":"${contextId.id}","command":"${command}"}""")
-    form.setContentType("application/json")
-    post.setEntity(form)
+    val entity = new MultipartEntity()
+
+    entity.addPart("language", new StringBody(language))
+    entity.addPart("clusterId", new StringBody(cluster.id))
+    entity.addPart("contextId", new StringBody(contextId.id))
+    entity.addPart("command", new FileBody(new File(commandFilePath)))
+    post.setEntity(entity)
+
     val response = client.execute(post)
     val handler = new BasicResponseHandler()
     val responseString = handler.handleResponse(response).trim
@@ -283,7 +290,7 @@ private[sbtdatabricks] class DatabricksHttp(endpoint: String, client: HttpClient
     form.setContentType("application/json")
     post.setEntity(form)
     val response = client.execute(post)
-    val handler = new org.apache.http.impl.client.BasicResponseHandler()
+    val handler = new BasicResponseHandler()
     handler.handleResponse(response)
   }
 
