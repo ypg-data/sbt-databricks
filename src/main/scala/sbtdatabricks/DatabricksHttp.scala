@@ -21,6 +21,7 @@ import sbt._
 import scala.collection.JavaConversions._
 
 import sbtdatabricks.DatabricksPlugin.ClusterName
+import sbtdatabricks.util._
 
 private[sbtdatabricks] class DatabricksHttp(endpoint: String, client: HttpClient) {
 
@@ -143,10 +144,10 @@ private[sbtdatabricks] class DatabricksHttp(endpoint: String, client: HttpClient
    * @return The id of the execution context
    *
    */
-  private[sbtdatabricks] def createContext(language: String, cluster: Cluster): ContextId = {
-    println(s"Creating '${language}' execution context on cluster '${cluster.name}'")
+  private[sbtdatabricks] def createContext(language: DBCExecutionLanguage, cluster: Cluster): ContextId = {
+    println(s"Creating '${language.is}' execution context on cluster '${cluster.name}'")
     val post = new HttpPost(endpoint + CONTEXT_CREATE)
-    val form = new StringEntity(s"""{"language":"${language}","clusterId":"${cluster.id}"}""")
+    val form = new StringEntity(s"""{"language":"${language.is}","clusterId":"${cluster.id}"}""")
     form.setContentType("application/json")
     post.setEntity(form)
     val response = client.execute(post)
@@ -205,15 +206,15 @@ private[sbtdatabricks] class DatabricksHttp(endpoint: String, client: HttpClient
    *
    */
   private[sbtdatabricks] def executeCommand(
-      language: String,
+      language: DBCExecutionLanguage,
       cluster: Cluster,
       contextId: ContextId,
       commandFilePath: String): CommandId = {
-    println(s"Executing '${language}' command on cluster '${cluster.name}'")
+    println(s"Executing '${language.is}' command on cluster '${cluster.name}'")
     val post = new HttpPost(endpoint + COMMAND_EXECUTE)
     val entity = new MultipartEntity()
 
-    entity.addPart("language", new StringBody(language))
+    entity.addPart("language", new StringBody(language.is))
     entity.addPart("clusterId", new StringBody(cluster.id))
     entity.addPart("contextId", new StringBody(contextId.id))
     entity.addPart("command", new FileBody(new File(commandFilePath)))

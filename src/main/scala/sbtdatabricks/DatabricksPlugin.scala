@@ -4,6 +4,8 @@ import sbt._
 import Keys._
 import scala.collection.mutable.{HashMap => MutHashMap, MultiMap => MutMultiMap, Set => MutSet}
 
+import sbtdatabricks.util._
+
 object DatabricksPlugin extends AutoPlugin {
 
   type LibraryName = String
@@ -24,9 +26,9 @@ object DatabricksPlugin extends AutoPlugin {
     val dbcLibraryPath = settingKey[String]("Where in the workspace to add the libraries.")
     val dbcListClusters = taskKey[Unit]("List all available clusters and their states.")
     val dbcRestartClusters = taskKey[Unit]("Restart the given clusters.")
-    val dbcExecuteCommand = taskKey[Unit]("Execute a command on a particular cluster")
+    val dbcExecuteCommand = taskKey[Seq[CommandStatus]]("Execute a command on a particular cluster")
     val dbcCommandFile = settingKey[String]("Location of file containing the command to be executed")
-    val dbcExecutionLanguage = settingKey[String]("Which language is to be used when executing a command")
+    val dbcExecutionLanguage = settingKey[DBCExecutionLanguage]("Which language is to be used when executing a command")
 
     val dbcApiUrl = settingKey[String]("The URL for the DB API endpoint")
     val dbcUsername = settingKey[String]("The username for Databricks Cloud")
@@ -128,13 +130,14 @@ object DatabricksPlugin extends AutoPlugin {
     }
   }
 
-  private lazy val executeCommandImpl: Def.Initialize[Task[Unit]] = Def.taskDyn {
+  private lazy val executeCommandImpl: Def.Initialize[Task[Seq[CommandStatus]]] = Def.taskDyn {
     val client = dbcApiClient.value
     val language = dbcExecutionLanguage.value
     val onClusters = dbcClusters.value
     val allClusters = dbcFetchClusters.value
     val commandFile = dbcCommandFile.value
     Def.task {
+      val commandStatuses = Seq.empty[CommandStatus]
       for (clusterName <- onClusters) {
         // Duplicating aspects of code in DatabricksHttp.foreachCluster
         // - this is due to inability to pass values between DatabricksHttp function
@@ -150,9 +153,9 @@ object DatabricksPlugin extends AutoPlugin {
         val contextId = client.createContext(language, confirmedCluster)
         while (!contextCorrect) {
           val contextStatus = client.checkContext(contextId, confirmedCluster)
-          if (contextStatus.status == "Running") {
+          if (contextStatus.status == DBCContextRunning.status) {
             contextCorrect = true
-          } else if (contextStatus.status == "Error") {
+          } else if (contextStatus.status == DBCContextError.status) {
             client.destroyContext(contextId, confirmedCluster)
             throw new Exception(s"The Execution Context '${contextId.id} returned an error. Terminated context")
           }
@@ -163,9 +166,10 @@ object DatabricksPlugin extends AutoPlugin {
         var commandComplete = false
         while (!commandComplete) {
           val commandStatus = client.checkCommand(confirmedCluster, contextId, commandId)
-          if (commandStatus.status == "Finished") {
+          if (commandStatus.status == DBCCommandFinished.status) {
+            commandStatuses :+ commandStatus
             commandComplete = true
-          } else if (commandStatus.status == "Error") {
+          } else if (commandStatus.status == DBCCommandError.status) {
             client.cancelCommand(confirmedCluster, contextId, commandId)
             client.destroyContext(contextId, confirmedCluster)
             throw new Exception(s"The command '${commandId.id} returned an error. Cancelled command and terminated context")
@@ -175,6 +179,7 @@ object DatabricksPlugin extends AutoPlugin {
         }
         client.destroyContext(contextId, confirmedCluster)
       }
+      commandStatuses
     }
   }
 
