@@ -1,4 +1,6 @@
 import sbtdatabricks.DatabricksPlugin.dbcClasspath
+import sbtdatabricks.util._
+import sbt.File
 
 version := "0.1"
 
@@ -11,7 +13,9 @@ organization := "awesome.test"
 lazy val dbcSettings: Seq[Setting[_]] = Seq(
   dbcApiUrl := "test",
   dbcUsername := "test",
-  dbcPassword := "test"
+  dbcPassword := "test",
+  dbcExecutionLanguage := DBCScala,
+  dbcCommandFile := new File("")
 )
 
 lazy val projA = Project(

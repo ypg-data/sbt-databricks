@@ -32,6 +32,7 @@ settings before running these commands.:
  - `dbcUpload`: Uploads your Library to Databricks Cloud. Deletes the older version.
  - `dbcAttach`: Attaches your Library to the specified clusters.
  - `dbcRestartClusters`: Restarts the specified clusters.
+ - `dbcExecuteCommand`: Runs a command on a specified DBC Cluster
 
 Other helpful commands are:
  - `dbcListClusters`: View the states of available clusters.
@@ -50,7 +51,7 @@ dbcPassword := // e.g. "admin" or System.getenv("DBCLOUD_PASSWORD")
 dbcApiUrl := // https://organization.cloud.databricks.com:34563/api/1.1
 
 // Add any clusters that you would like to deploy your work to. e.g. "My Cluster"
-dbcClusters += // Add "ALL_CLUSTERS" if you want to attach your work to all clusters
+dbcClusters += // Add "ALL_CLUSTERS" if you want to attach your work to all clusters. NOTE: This will need to be edited for the dbcExecuteCommand command
 ```
 
 Other optional parameters are:
@@ -60,6 +61,10 @@ dbcLibraryPath := // Default is "/"
 
 // Whether to restart the clusters everytime a new version is uploaded to Databricks Cloud
 dbcRestartOnAttach := // Default true
+
+// The context/command language that will be employed when dbcExecuteCommand
+// is called
+dbcExecutionLanguage := // Type DBCExecutionLanguage -> see sbtdatabricks/util/
 ```
 
 Tests
