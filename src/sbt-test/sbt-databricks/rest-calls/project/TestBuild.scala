@@ -29,9 +29,7 @@ object TestBuild extends Build {
   val dbcSettings = Seq(
     dbcApiUrl := "dummy",
     dbcUsername := "test",
-    dbcPassword := "test",
-    dbcExecutionLanguage := DBCScala,
-    dbcCommandFile := new File("")
+    dbcPassword := "test"
   )
 
   lazy val root = Project(id = "root", base = file("."),

@@ -13,9 +13,7 @@ organization := "awesome.test"
 lazy val dbcSettings: Seq[Setting[_]] = Seq(
   dbcApiUrl := "test",
   dbcUsername := "test",
-  dbcPassword := "test",
-  dbcExecutionLanguage := DBCScala,
-  dbcCommandFile := new File("")
+  dbcPassword := "test"
 )
 
 lazy val projA = Project(
