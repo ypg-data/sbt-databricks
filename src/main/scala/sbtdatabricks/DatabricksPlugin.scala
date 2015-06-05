@@ -44,7 +44,7 @@ object DatabricksPlugin extends AutoPlugin {
     val dbcListClusters = taskKey[Unit]("List all available clusters and their states.")
     val dbcRestartClusters = taskKey[Unit]("Restart the given clusters.")
     val dbcExecuteCommand = taskKey[Seq[CommandStatus]]("Execute a command on a particular cluster")
-    val dbcCommandFile = taskKey[File]("Location of file containing the command to be executed")
+    val dbcCommandFile = taskKey[java.io.File]("Location of file containing the command to be executed")
     val dbcExecutionLanguage = taskKey[DBCExecutionLanguage]("Which language is to be used when executing a command")
 
     val dbcApiUrl = taskKey[String]("The URL for the DB API endpoint")
