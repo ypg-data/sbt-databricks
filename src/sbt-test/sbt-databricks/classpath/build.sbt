@@ -15,7 +15,7 @@ lazy val dbcSettings: Seq[Setting[_]] = Seq(
   dbcUsername := "test",
   dbcPassword := "test",
   dbcExecutionLanguage := DBCScala,
-  dbcCommandFile := new java.io.File("")
+  dbcCommandFile := new File("")
 )
 
 lazy val projA = Project(

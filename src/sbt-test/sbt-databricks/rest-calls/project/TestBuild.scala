@@ -31,7 +31,7 @@ object TestBuild extends Build {
     dbcUsername := "test",
     dbcPassword := "test",
     dbcExecutionLanguage := DBCScala,
-    dbcCommandFile := new java.io.File("")
+    dbcCommandFile := new File("")
   )
 
   lazy val root = Project(id = "root", base = file("."),
@@ -468,7 +468,7 @@ object TestBuild extends Build {
             contextIdStr),
         outputFile),
       dbcExecutionLanguage := DBCScala,
-      dbcCommandFile := new java.io.File("test"),
+      dbcCommandFile := new File("test"),
       dbcClusters += "a",
       name := "test14",
       TaskKey[Unit]("test") := {
@@ -519,7 +519,7 @@ object TestBuild extends Build {
             contextIdStr),
         outputFile),
       dbcExecutionLanguage := DBCScala,
-      dbcCommandFile := new java.io.File("test"),
+      dbcCommandFile := new File("test"),
       dbcClusters += "a",
       name := "test15",
       TaskKey[Unit]("test") := {

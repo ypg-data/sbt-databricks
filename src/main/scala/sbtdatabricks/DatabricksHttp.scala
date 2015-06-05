@@ -230,7 +230,7 @@ class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintSt
       language: DBCExecutionLanguage,
       cluster: Cluster,
       contextId: ContextId,
-      commandFilePath: String): CommandId = {
+      commandFile: File): CommandId = {
     outputStream.println(s"Executing '${language.is}' command on cluster '${cluster.name}'")
     val post = new HttpPost(endpoint + COMMAND_EXECUTE)
     val entity = new MultipartEntity()
@@ -238,7 +238,7 @@ class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintSt
     entity.addPart("language", new StringBody(language.is))
     entity.addPart("clusterId", new StringBody(cluster.id))
     entity.addPart("contextId", new StringBody(contextId.id))
-    entity.addPart("command", new FileBody(new File(commandFilePath)))
+    entity.addPart("command", new FileBody(commandFile))
     post.setEntity(entity)
 
     val response = client.execute(post)
