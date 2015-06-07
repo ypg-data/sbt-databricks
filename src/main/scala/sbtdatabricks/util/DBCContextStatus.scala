@@ -1,6 +1,6 @@
-package sbtdatabricks.util
+package sbtdatabricks
 
-sealed trait DBCContextStatus { def status: String }
-case object DBCContextRunning extends DBCContextStatus { val status = "Running" }
-case object DBCContextPending extends DBCContextStatus { val status = "Pending" }
-case object DBCContextError extends DBCContextStatus { val status = "Error" }
+private[sbtdatabricks] sealed trait DBCContextStatus { def status: String }
+private[sbtdatabricks] case object DBCContextRunning extends DBCContextStatus { val status = "Running" }
+private[sbtdatabricks] case object DBCContextPending extends DBCContextStatus { val status = "Pending" }
+private[sbtdatabricks] case object DBCContextError extends DBCContextStatus { val status = "Error" }

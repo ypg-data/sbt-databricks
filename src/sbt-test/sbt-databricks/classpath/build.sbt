@@ -1,5 +1,4 @@
 import sbtdatabricks.DatabricksPlugin.dbcClasspath
-import sbtdatabricks.util._
 import sbt.File
 
 version := "0.1"

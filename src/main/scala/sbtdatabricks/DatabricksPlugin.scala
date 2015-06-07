@@ -19,7 +19,6 @@ package sbtdatabricks
 import sbt._
 import Keys._
 import scala.collection.mutable.{HashMap => MutHashMap, MultiMap => MutMultiMap, Set => MutSet}
-import sbtdatabricks.util._
 
 object DatabricksPlugin extends AutoPlugin {
 

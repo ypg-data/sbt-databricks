@@ -1,3 +1,5 @@
+package sbtdatabricks
+
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
@@ -15,7 +17,6 @@ import org.scalatest.mock.MockitoSugar.{mock => mmock}
 import sbtdatabricks._
 import sbtdatabricks.DatabricksPlugin._
 import sbtdatabricks.DatabricksPlugin.autoImport._
-import sbtdatabricks.util._
 
 import scala.io.Source
 import sbt._

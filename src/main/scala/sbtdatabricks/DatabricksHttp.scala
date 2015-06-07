@@ -40,7 +40,6 @@ import scala.collection.mutable.ArrayBuffer
 
 import sbtdatabricks.DatabricksPlugin.ClusterName
 import sbtdatabricks.DatabricksPlugin.autoImport.DBC_ALL_CLUSTERS
-import sbtdatabricks.util._
 
 /** Collection of REST calls to Databricks Cloud and related helper functions. Exposed for tests */
 class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintStream = System.out) {
@@ -168,7 +167,8 @@ class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintSt
   private[sbtdatabricks] def createContext(language: DBCExecutionLanguage, cluster: Cluster): ContextId = {
     outputStream.println(s"Creating '${language.is}' execution context on cluster '${cluster.name}'")
     val post = new HttpPost(endpoint + CONTEXT_CREATE)
-    val form = new StringEntity(s"""{"language":"${language.is}","clusterId":"${cluster.id}"}""")
+    val request = CreateContextRequestV1(language.is, cluster.id)
+    val form = new StringEntity(mapper.writeValueAsString(request))
     form.setContentType("application/json")
     post.setEntity(form)
     val response = client.execute(post)
@@ -206,7 +206,8 @@ class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintSt
   private[sbtdatabricks] def destroyContext(contextId: ContextId, cluster: Cluster): ContextId = {
     outputStream.println(s"Terminating execution context '${contextId.id}' on cluster '${cluster.name}'")
     val post = new HttpPost(endpoint + CONTEXT_DESTROY)
-    val form = new StringEntity(s"""{"clusterId":"${cluster.id}","contextId":"${contextId.id}"}""")
+    val request = DestroyContextRequestV1(cluster.id, contextId.id)
+    val form = new StringEntity(mapper.writeValueAsString(request))
     form.setContentType("application/json")
     post.setEntity(form)
     val response = client.execute(post)
@@ -289,7 +290,8 @@ class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintSt
       commandId: CommandId): CommandId = {
     outputStream.println(s"Cancelling command '${commandId.id}' on cluster '${cluster.name}'")
     val post = new HttpPost(endpoint + COMMAND_CANCEL)
-    val form = new StringEntity(s"""{"clusterId":"${cluster.id}","contextId":"${contextId.id}","commandId":"${commandId.id}"}""")
+    val request = CancelCommandRequestV1(cluster.id, contextId.id, commandId.id)
+    val form = new StringEntity(mapper.writeValueAsString(request))
     form.setContentType("application/json")
     post.setEntity(form)
     val response = client.execute(post)
