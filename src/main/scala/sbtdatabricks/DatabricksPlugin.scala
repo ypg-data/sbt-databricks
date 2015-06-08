@@ -247,15 +247,15 @@ object DatabricksPlugin extends AutoPlugin {
         client.createContext(language, confirmedCluster),
         confirmedCluster)
 
-      if (contextId.isDefined) {
+      contextId.foreach( cId => {
         val commandId = onCommandCompletion(
           confirmedCluster,
-          contextId.get,
-          client.executeCommand(language, confirmedCluster, contextId.get, commandFile))
+          cId,
+          client.executeCommand(language, confirmedCluster, cId, commandFile))
         if (commandId.isDefined) {
-          client.destroyContext(contextId.get, confirmedCluster)
+          client.destroyContext(cId, confirmedCluster)
         }
-      }
+      })
     }
     commandStatuses
   }
