@@ -44,7 +44,8 @@ object DatabricksPlugin extends AutoPlugin {
     val dbcRestartClusters = taskKey[Unit]("Restart the given clusters.")
     val dbcExecuteCommand = taskKey[Seq[CommandStatus]]("Execute a command on a particular cluster")
     val dbcCommandFile = taskKey[File]("Location of file containing the command to be executed")
-    val dbcExecutionLanguage = taskKey[DBCExecutionLanguage]("Which language is to be used when executing a command")
+    val dbcExecutionLanguage = taskKey[DBCExecutionLanguage]("""Which language is to be used when executing
+                                                                a command""".stripMargin)
 
     val dbcApiUrl = taskKey[String]("The URL for the DB API endpoint")
     val dbcUsername = taskKey[String]("The username for Databricks Cloud")
@@ -215,14 +216,12 @@ object DatabricksPlugin extends AutoPlugin {
       val contextStatus = client.checkContext(contextId, cluster)
       contextStatus.status match {
         case DBCContextRunning.status => Some(contextId)
-        case DBCContextError.status => {
+        case DBCContextError.status =>
           client.destroyContext(contextId, cluster)
           None
-        }
-        case _ => {
+        case _ =>
           Thread sleep 500
           onContextCompletion(contextId, cluster)
-        }
       }
     }
 
@@ -230,19 +229,16 @@ object DatabricksPlugin extends AutoPlugin {
     def onCommandCompletion(cluster: Cluster, contextId: ContextId, commandId: CommandId) : Option[CommandId] = {
       val commandStatus = client.checkCommand(cluster, contextId, commandId)
       commandStatus.status match {
-        case DBCCommandFinished.status => {
+        case DBCCommandFinished.status =>
           commandStatuses :+ commandStatus
           Some(commandId)
-        }
-        case DBCCommandError.status => {
+        case DBCCommandError.status =>
           client.cancelCommand(cluster, contextId, commandId)
           client.destroyContext(contextId, cluster)
           None
-        }
-        case _ => {
+        case _ =>
           Thread sleep 3000
           onCommandCompletion(cluster, contextId, commandId)
-        }
       }
     }
 
@@ -251,12 +247,12 @@ object DatabricksPlugin extends AutoPlugin {
         client.createContext(language, confirmedCluster),
         confirmedCluster)
 
-      if (contextId != None) {
+      if (contextId.isDefined) {
         val commandId = onCommandCompletion(
           confirmedCluster,
           contextId.get,
           client.executeCommand(language, confirmedCluster, contextId.get, commandFile))
-        if (commandId != None) {
+        if (commandId.isDefined) {
           client.destroyContext(contextId.get, confirmedCluster)
         }
       }
@@ -299,7 +295,7 @@ object DatabricksPlugin extends AutoPlugin {
       sys.error(
         """
           |dbcExecutionLanguage not defined. Please make sure to add this key
-          |  to your build
+          |  to your build when using dbcExecuteCommand
           |  See the sbt-databricks README for more info.
         """.stripMargin)
     },
@@ -307,7 +303,7 @@ object DatabricksPlugin extends AutoPlugin {
       sys.error(
         """
           |dbcCommandFile not defined. Please make sure to add this key
-          |  to your build
+          |  to your build when using dbcExecuteCommand
           |  See the sbt-databricks README for more info.
         """.stripMargin)
     },

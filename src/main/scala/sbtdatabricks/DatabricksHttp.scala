@@ -251,7 +251,6 @@ class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintSt
 
   /**
    * Check the status of a command
-   * @param language the relevant coding language
    * @param cluster the relevant cluster within which the context will be created
    * @param contextId The id of the execution context
    * @param command The code to be executed on the cluster
@@ -277,7 +276,6 @@ class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintSt
 
   /**
    * Cancel a command
-   * @param language the relevant coding language
    * @param cluster the relevant cluster within which the context will be created
    * @param contextId The id of the execution context
    * @param command The code to be executed on the cluster

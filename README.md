@@ -18,8 +18,8 @@ Just add the following line to `project/plugins.sbt`:
 addSbtPlugin("com.databricks" %% "sbt-databricks" % "0.1.1")
 ```
 
-Usage
-=====
+Usage - Deployment
+==================
 
 There are four major commands that can be used. Please check the next section for mandatory
 settings before running these commands.:
@@ -32,7 +32,24 @@ settings before running these commands.:
  - `dbcUpload`: Uploads your Library to Databricks Cloud. Deletes the older version.
  - `dbcAttach`: Attaches your Library to the specified clusters.
  - `dbcRestartClusters`: Restarts the specified clusters.
- - `dbcExecuteCommand`: Runs a command on a specified DBC Cluster
+
+Usage - Command Execution
+=========================
+
+
+`dbcExecuteCommand`: Runs a command on a specified DBC Cluster
+// The context/command language that will be employed when dbcExecuteCommand
+// is called
+dbcExecutionLanguage := // Type DBCExecutionLanguage -> see sbtdatabricks/util/
+// The file containing the code that is to be processed on the DBC cluser
+dbcCommandFile := // Type File
+
+An example, using just an sbt invocation is below
+```
+sbt "project PipelineTest" "set dbcClusters := Seq(\"CLUSTER_NAME")"\
+    "set dbcCommandFile := new File(\"/Path/to/file")" dbcExecuteCommand
+```
+
 
 Other helpful commands are:
  - `dbcListClusters`: View the states of available clusters.
@@ -51,7 +68,8 @@ dbcPassword := // e.g. "admin" or System.getenv("DBCLOUD_PASSWORD")
 dbcApiUrl := // https://organization.cloud.databricks.com:34563/api/1.1
 
 // Add any clusters that you would like to deploy your work to. e.g. "My Cluster"
-dbcClusters += // Add "ALL_CLUSTERS" if you want to attach your work to all clusters. NOTE: This will need to be edited for the dbcExecuteCommand command
+dbcClusters += // Add "ALL_CLUSTERS" if you want to attach your work to all clusters or, if using dbcExecuteCommand, for running your code on all
+clusters
 ```
 
 Other optional parameters are:
@@ -61,10 +79,6 @@ dbcLibraryPath := // Default is "/"
 
 // Whether to restart the clusters everytime a new version is uploaded to Databricks Cloud
 dbcRestartOnAttach := // Default true
-
-// The context/command language that will be employed when dbcExecuteCommand
-// is called
-dbcExecutionLanguage := // Type DBCExecutionLanguage -> see sbtdatabricks/util/
 ```
 
 Tests
