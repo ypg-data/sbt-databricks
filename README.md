@@ -47,7 +47,7 @@ dbcCommandFile := // Type File
 
 An example, using just an sbt invocation is below
 ```
-sbt "project PipelineTest" "set dbcClusters := Seq(\"CLUSTER_NAME")"\
+sbt "project ProjectName" "set dbcClusters := Seq(\"CLUSTER_NAME")"\
     "set dbcCommandFile := new File(\"/Path/to/file")" dbcExecuteCommand
 ```
 
