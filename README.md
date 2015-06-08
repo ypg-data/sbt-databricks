@@ -36,13 +36,14 @@ settings before running these commands.:
 Usage - Command Execution
 =========================
 
-
-`dbcExecuteCommand`: Runs a command on a specified DBC Cluster
+```scala
+`dbcExecuteCommand` // Runs a command on a specified DBC Cluster
 // The context/command language that will be employed when dbcExecuteCommand
 // is called
 dbcExecutionLanguage := // Type DBCExecutionLanguage -> see sbtdatabricks/util/
 // The file containing the code that is to be processed on the DBC cluser
 dbcCommandFile := // Type File
+```
 
 An example, using just an sbt invocation is below
 ```
