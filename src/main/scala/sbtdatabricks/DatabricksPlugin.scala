@@ -212,7 +212,10 @@ object DatabricksPlugin extends AutoPlugin {
     val commandStatuses = Seq.empty[CommandStatus]
 
     @annotation.tailrec
-    def onContextCompletion(contextId: ContextId, cluster: Cluster) : Option[ContextId] = {
+    def onContextCompletion (
+      contextId: ContextId,
+      cluster: Cluster) : Option[ContextId] =
+    {
       val contextStatus = client.checkContext(contextId, cluster)
       contextStatus.status match {
         case DBCContextRunning.status => Some(contextId)
@@ -226,7 +229,9 @@ object DatabricksPlugin extends AutoPlugin {
     }
 
     @annotation.tailrec
-    def onCommandCompletion(cluster: Cluster, contextId: ContextId, commandId: CommandId) : Option[CommandId] = {
+    def onCommandCompletion(cluster: Cluster,
+      contextId: ContextId,
+      commandId: CommandId) : Option[CommandId] = {
       val commandStatus = client.checkCommand(cluster, contextId, commandId)
       commandStatus.status match {
         case DBCCommandFinished.status =>
@@ -247,7 +252,7 @@ object DatabricksPlugin extends AutoPlugin {
         client.createContext(language, confirmedCluster),
         confirmedCluster)
 
-      contextId.foreach( cId => {
+      contextId.foreach{ cId => {
         val commandId = onCommandCompletion(
           confirmedCluster,
           cId,
@@ -255,7 +260,7 @@ object DatabricksPlugin extends AutoPlugin {
         if (commandId.isDefined) {
           client.destroyContext(cId, confirmedCluster)
         }
-      })
+      }}
     }
     commandStatuses
   }
@@ -376,8 +381,40 @@ case class LibraryStatus(
     statuses: List[LibraryClusterStatus])
 case class LibraryClusterStatus(clusterId: String, status: String)
 case class ContextId(id: String)
-case class ContextStatus(status: String, id: String)
+case class ContextStatus(status: String, id: String) {
+  override def toString: String = {
+    status match {
+      case DBCContextError.status =>
+        s"An error occurred within execution context '$id'"
+      case _ =>
+        s"The status of the execution context is '$status'"
+    }
+  }
+}
 case class CommandId(id: String)
 // This handles only text results - not table results - adjust
-case class CommandResults(resultType: String, data: Option[String] = None, cause: Option[String] = None)
-case class CommandStatus(status: String, id: String, results: CommandResults)
+case class CommandResults(
+    resultType: String,
+    data: Option[String] = None,
+    cause: Option[String] = None) {
+  override def toString: String = {
+    resultType match {
+      case "error" =>
+        s"An error occurred during execution with the following cause '${cause.get}'"
+      case _ =>
+        s"The following results were returned:\n ${data.get}"
+    }
+  }
+}
+case class CommandStatus(status: String, id: String, results: CommandResults) {
+  override def toString: String = {
+    status match {
+      case DBCCommandError.status =>
+        s"An error occurred within command '$id'"
+      case DBCCommandFinished.status =>
+        results.toString
+      case _ =>
+        s"The status of this command is '$status'"
+    }
+  }
+}

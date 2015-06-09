@@ -2,15 +2,15 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import org.apache.http.entity.StringEntity
-import org.apache.http.{ProtocolVersion, HttpResponse}
+import org.apache.http.{ ProtocolVersion, HttpResponse }
 import org.apache.http.client.HttpClient
-import org.apache.http.client.methods.{HttpGet, HttpUriRequest}
+import org.apache.http.client.methods.{ HttpGet, HttpUriRequest }
 import org.apache.http.message.BasicHttpResponse
-import org.mockito.Matchers.{any, anyString}
+import org.mockito.Matchers.{ any, anyString }
 import org.mockito.Mockito._
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
-import org.scalatest.mock.MockitoSugar.{mock => mmock}
+import org.scalatest.mock.MockitoSugar.{ mock => mmock }
 
 import sbtdatabricks._
 import sbtdatabricks.DatabricksPlugin._
@@ -28,8 +28,7 @@ object TestBuild extends Build {
   val dbcSettings = Seq(
     dbcApiUrl := "dummy",
     dbcUsername := "test",
-    dbcPassword := "test"
-  )
+    dbcPassword := "test")
 
   lazy val root = Project(id = "root", base = file("."),
     settings = dbcSettings)
@@ -48,8 +47,7 @@ object TestBuild extends Build {
         val (fetchClusters, _) = dbcFetchClusters.value
         if (fetchClusters.length != 1) sys.error("Returned wrong number of clusters.")
         if (expect(0) != fetchClusters(0)) sys.error("Cluster not returned properly.")
-      }
-    )
+      })
   }
 
   lazy val test1 = Project(id = "clusterFetch", base = file("1"),
@@ -66,8 +64,7 @@ object TestBuild extends Build {
         if (libraries.size != 2) sys.error("Returned wrong number of libraries.")
         if (libraries("abc").size != 2) sys.error("Returned wrong number of libraries.")
         if (libraries("ghi").size != 1) sys.error("Returned wrong number of libraries.")
-      }
-    )
+      })
   }
 
   lazy val test2 = Project(id = "libraryFetch", base = file("2"),
@@ -93,8 +90,7 @@ object TestBuild extends Build {
         output.foreach { line =>
           if (!line.contains("Uploading")) sys.error("Upload message not printed")
         }
-      }
-    )
+      })
   }
 
   lazy val test3 = Project(id = "libraryUpload", base = file("3"),
@@ -120,15 +116,15 @@ object TestBuild extends Build {
         // 1 from Spark csv (upload common-csv, the dependency),
         // 1 from deleting test4 (the one in /jkl is omitted), 1 from uploading test4
         if (output.length != 3) sys.error("Wrong number of updates printed.")
-        output.zipWithIndex.foreach { case (line, index) =>
-          if (index > 0) {
-            if (!line.contains("Uploading")) sys.error("Upload message not printed")
-          } else {
-            if (!line.contains("Deleting")) sys.error("Delete message not printed")
-          }
+        output.zipWithIndex.foreach {
+          case (line, index) =>
+            if (index > 0) {
+              if (!line.contains("Uploading")) sys.error("Upload message not printed")
+            } else {
+              if (!line.contains("Deleting")) sys.error("Delete message not printed")
+            }
         }
-      }
-    )
+      })
   }
 
   lazy val test4 = Project(id = "oldLibraryDelete", base = file("4"),
@@ -148,8 +144,7 @@ object TestBuild extends Build {
         output.foreach { line =>
           if (!line.contains("Restarting cluster:")) sys.error("Restart message not printed")
         }
-      }
-    )
+      })
   }
 
   lazy val test5 = Project(id = "clusterRestart", base = file("5"),
@@ -169,8 +164,7 @@ object TestBuild extends Build {
         output.foreach { line =>
           if (!line.contains("Restarting cluster:")) sys.error("Restart message not printed")
         }
-      }
-    )
+      })
   }
 
   lazy val test6 = Project(id = "clusterRestartAll", base = file("6"),
@@ -192,7 +186,7 @@ object TestBuild extends Build {
       name := "test7",
       version := "0.1-SNAPSHOT",
       libraryDependencies += "com.databricks" %% "spark-csv" % "1.0.0",
-      TaskKey[Unit]("test") :=  {
+      TaskKey[Unit]("test") := {
         dbcAttach.value
         val output = Source.fromFile(outputFile).getLines().toSeq
         // 2 clusters x 2 libraries (test7 + spark-csv (dependency not in path, therefore skip))
@@ -202,8 +196,7 @@ object TestBuild extends Build {
             sys.error("Restart message not printed")
           }
         }
-      }
-    )
+      })
   }
 
   lazy val test7 = Project(id = "libAttach", base = file("7"),
@@ -235,8 +228,7 @@ object TestBuild extends Build {
             sys.error("Restart message not printed")
           }
         }
-      }
-    )
+      })
   }
 
   lazy val test8 = Project(id = "libAttachAll", base = file("8"),
@@ -271,8 +263,7 @@ object TestBuild extends Build {
         if (!out(3).contains("Attaching")) sys.error("Attach message not printed")
         if (!out(4).contains("Attaching")) sys.error("Attach message not printed")
         if (!out(5).contains("Attaching")) sys.error("Attach message not printed")
-      }
-    )
+      })
   }
 
   lazy val test9 = Project(id = "deploy", base = file("9"),
@@ -323,8 +314,7 @@ object TestBuild extends Build {
         if (!out(1).contains("Uploading")) sys.error("Upload message not printed")
         if (!out(2).contains("Attaching")) sys.error("Attach message not printed")
         if (!out(3).contains("Restarting")) sys.error("Restart message not printed")
-      }
-    )
+      })
   }
 
   lazy val test10 = Project(id = "secondDeploy", base = file("10"),
@@ -335,8 +325,7 @@ object TestBuild extends Build {
       dbcApiClient := mockServerError("", file("11") / "output.txt"),
       TaskKey[Unit]("test") := {
         dbcFetchClusters.value
-      }
-    )
+      })
   }
 
   lazy val test11 = Project(id = "serverError", base = file("11"),
@@ -378,8 +367,7 @@ object TestBuild extends Build {
         if (!out(2).contains("Attaching")) sys.error("Attach message not printed")
         if (!out(3).contains("Attaching")) sys.error("Attach message not printed")
         if (!out(4).contains("Attaching")) sys.error("Attach message not printed")
-      }
-    )
+      })
   }
 
   lazy val test12 = Project(id = "deployWithoutRestart", base = file("12"),
@@ -421,8 +409,7 @@ object TestBuild extends Build {
         if (!out(7).contains("Attaching")) sys.error("Attach message not printed")
         if (!out(8).contains("Attaching")) sys.error("Attach message not printed")
         if (!out(9).contains("Restarting")) sys.error("Restart message not printed")
-      }
-    )
+      })
   }
 
   lazy val test13 = Project(id = "deployAllClusters", base = file("13"),
@@ -439,7 +426,8 @@ object TestBuild extends Build {
     val commandIdStr = mapper.writeValueAsString(commandId)
     val commandStatusRunning = CommandStatus("Running", "1234", null)
     val commandStatusRunningStr = mapper.writeValueAsString(commandStatusRunning)
-    val commandStatusFinished = CommandStatus("Finished", "1234", null)
+    val commandResults = CommandResults(resultType = "text", data = Some("{Job ran ok!!}"))
+    val commandStatusFinished = CommandStatus("Finished", "1234", commandResults)
     val commandStatusFinishedStr = mapper.writeValueAsString(commandStatusFinished)
     val clusterList = mapper.writeValueAsString(exampleClusters)
 
@@ -456,13 +444,13 @@ object TestBuild extends Build {
         7- Destroy context
         */
         Seq(clusterList,
-            contextIdStr,
-            contextStatusPendingStr,
-            contextStatusRunningStr,
-            commandIdStr,
-            commandStatusRunningStr,
-            commandStatusFinishedStr,
-            contextIdStr),
+          contextIdStr,
+          contextStatusPendingStr,
+          contextStatusRunningStr,
+          commandIdStr,
+          commandStatusRunningStr,
+          commandStatusFinishedStr,
+          contextIdStr),
         outputFile),
       dbcExecutionLanguage := DBCScala,
       dbcCommandFile := new File("test"),
@@ -471,16 +459,12 @@ object TestBuild extends Build {
       TaskKey[Unit]("test") := {
         dbcExecuteCommand.value
         val out = Source.fromFile(outputFile).getLines().toSeq
-        if (out.length != 14) sys.error("Wrong number of messages printed.")
-        if (!out(1).contains("Creating Context")) sys.error("Creating context message not printed")
-        if (!out(3).contains("Checking Context")) sys.error("Checking Context message not printed")
-        if (!out(5).contains("Checking Context")) sys.error("Checking Context message not printed")
-        if (!out(7).contains("Execute Command")) sys.error("Execute command message not printed")
-        if (!out(9).contains("Check Command")) sys.error("Check command message not printed")
-        if (!out(11).contains("Check Command")) sys.error("Check command message not printed")
-        if (!out(13).contains("Destroying Context")) sys.error("Destroying message not printed")
-      }
-    )
+        if (out.length != 12) sys.error("Wrong number of messages printed.")
+        if (!out(2).contains("Pending")) sys.error("Pending context message not printed")
+        if (!out(4).contains("Running")) sys.error("Running context message not printed")
+        if (!out(7).contains("Running")) sys.error("Running command message not printed")
+        if (!out(10).contains("Job ran ok")) sys.error("Data from command completion not printed")
+      })
   }
 
   lazy val test14 = Project(id = "executeCommandSuccessful", base = file("14"),
@@ -508,12 +492,12 @@ object TestBuild extends Build {
         6- Command terminated - receive command id
         7- Destroy context*/
         Seq(clusterList,
-            contextIdStr,
-            contextStatusRunningStr,
-            commandIdStr,
-            commandStatusErrorStr,
-            commandIdStr,
-            contextIdStr),
+          contextIdStr,
+          contextStatusRunningStr,
+          commandIdStr,
+          commandStatusErrorStr,
+          commandIdStr,
+          contextIdStr),
         outputFile),
       dbcExecutionLanguage := DBCScala,
       dbcCommandFile := new File("test"),
@@ -522,15 +506,10 @@ object TestBuild extends Build {
       TaskKey[Unit]("test") := {
         dbcExecuteCommand.value
         val out = Source.fromFile(outputFile).getLines().toSeq
-        if (out.length != 12) sys.error("Wrong number of messages printed.")
-        if (!out(1).contains("Creating Context")) sys.error("Creating context message not printed")
-        if (!out(3).contains("Checking Context")) sys.error("Checking Context message not printed")
-        if (!out(5).contains("Execute Command")) sys.error("Execute command message not printed")
-        if (!out(7).contains("Check Command")) sys.error("Execute command message not printed")
-        if (!out(9).contains("Cancel Command")) sys.error("Check command message not printed")
-        if (!out(11).contains("Destroying Context")) sys.error("Check command message not printed")
-      }
-    )
+        if (out.length != 8) sys.error("Wrong number of messages printed.")
+        if (!out(2).contains("Running")) sys.error("Running context message not printed")
+        if (!out(5).contains("An error")) sys.error("Command with error message not printed")
+      })
   }
 
   lazy val test15 = Project(id = "executeCommandFailure", base = file("15"),
@@ -555,5 +534,4 @@ object TestBuild extends Build {
     DatabricksHttp.testClient(client, file)
   }
 }
-
 
