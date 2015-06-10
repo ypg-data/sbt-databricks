@@ -212,40 +212,41 @@ object DatabricksPlugin extends AutoPlugin {
     val commandStatuses = Seq.empty[CommandStatus]
 
     @annotation.tailrec
-    def onContextCompletion (
+    def onContextCompletion(
       contextId: ContextId,
       cluster: Cluster) : Option[ContextId] =
-    {
-      val contextStatus = client.checkContext(contextId, cluster)
-      contextStatus.status match {
-        case DBCContextRunning.status => Some(contextId)
-        case DBCContextError.status =>
-          client.destroyContext(contextId, cluster)
-          None
-        case _ =>
-          Thread sleep 500
-          onContextCompletion(contextId, cluster)
+      {
+        val contextStatus = client.checkContext(contextId, cluster)
+        contextStatus.status match {
+          case DBCContextRunning.status => Some(contextId)
+          case DBCContextError.status =>
+            client.destroyContext(contextId, cluster)
+            None
+          case _ =>
+            Thread sleep 500
+            onContextCompletion(contextId, cluster)
+        }
       }
-    }
 
     @annotation.tailrec
     def onCommandCompletion(cluster: Cluster,
       contextId: ContextId,
-      commandId: CommandId) : Option[CommandId] = {
-      val commandStatus = client.checkCommand(cluster, contextId, commandId)
-      commandStatus.status match {
-        case DBCCommandFinished.status =>
-          commandStatuses :+ commandStatus
-          Some(commandId)
-        case DBCCommandError.status =>
-          client.cancelCommand(cluster, contextId, commandId)
-          client.destroyContext(contextId, cluster)
-          None
-        case _ =>
-          Thread sleep 3000
-          onCommandCompletion(cluster, contextId, commandId)
+      commandId: CommandId) : Option[CommandId] =
+      {
+        val commandStatus = client.checkCommand(cluster, contextId, commandId)
+        commandStatus.status match {
+          case DBCCommandFinished.status =>
+            commandStatuses :+ commandStatus
+            Some(commandId)
+          case DBCCommandError.status =>
+            client.cancelCommand(cluster, contextId, commandId)
+            client.destroyContext(contextId, cluster)
+            None
+          case _ =>
+            Thread sleep 3000
+            onCommandCompletion(cluster, contextId, commandId)
+        }
       }
-    }
 
     client.foreachCluster(onClusters, allClusters) { confirmedCluster =>
       val contextId = onContextCompletion(
