@@ -248,6 +248,10 @@ object DatabricksPlugin extends AutoPlugin {
       }
     }
 
+    if (!commandFile.exists) {
+      throw new java.io.FileNotFoundException("The dbcCommandFile provided does not exist!!")
+    }
+
     client.foreachCluster(onClusters, allClusters) { confirmedCluster =>
       val contextId = onContextCompletion(
         client.createContext(language, confirmedCluster),
