@@ -28,7 +28,6 @@ object DatabricksPlugin extends AutoPlugin {
     MutMultiMap[LibraryName, LibraryListResult]
 
   object autoImport {
-
     val dbcUpload = taskKey[(Seq[UploadedLibrary], Seq[UploadedLibrary])](
       "Upload your jar to Databricks Cloud as a Library.")
     val dbcAttach = taskKey[Unit]("Attach your library to a cluster. Restart cluster if " +
@@ -51,6 +50,11 @@ object DatabricksPlugin extends AutoPlugin {
     val dbcPassword = taskKey[String]("The password for Databricks Cloud")
 
     final val DBC_ALL_CLUSTERS = "ALL_CLUSTERS"
+
+    sealed trait DBCExecutionLanguage { val is: String }
+    case object DBCScala extends DBCExecutionLanguage { override val is = "scala" }
+    case object DBCPython extends DBCExecutionLanguage { override val is = "python" }
+    case object DBCSQL extends DBCExecutionLanguage { override val is = "sql" }
   }
 
   import autoImport._

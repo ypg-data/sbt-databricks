@@ -40,6 +40,7 @@ import scala.collection.mutable.ArrayBuffer
 
 import sbtdatabricks.DatabricksPlugin.ClusterName
 import sbtdatabricks.DatabricksPlugin.autoImport.DBC_ALL_CLUSTERS
+import sbtdatabricks.DatabricksPlugin.autoImport.{DBCExecutionLanguage, DBCScala, DBCPython, DBCSQL}
 
 /** Collection of REST calls to Databricks Cloud and related helper functions. Exposed for tests */
 class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintStream = System.out) {

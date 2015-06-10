@@ -48,7 +48,8 @@ dbcCommandFile := // Type File
 An example, using just an sbt invocation is below
 ```
 sbt "project ProjectName" "set dbcClusters := Seq(\"CLUSTER_NAME")"\
-    "set dbcCommandFile := new File(\"/Path/to/file")" dbcExecuteCommand
+    "set dbcCommandFile := new File(\"/Path/to/file.py")"\
+    "set dbcExecutionLanguage := DBCPython" dbcExecuteCommand
 ```
 
 
