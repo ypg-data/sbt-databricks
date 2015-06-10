@@ -38,7 +38,6 @@ import sbt._
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ArrayBuffer
 
-import sbtdatabricks.util._
 import sbtdatabricks.DatabricksPlugin.ClusterName
 import sbtdatabricks.DatabricksPlugin.autoImport.DBC_ALL_CLUSTERS
 

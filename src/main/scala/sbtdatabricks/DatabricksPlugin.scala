@@ -17,7 +17,6 @@
 package sbtdatabricks
 
 import sbt._
-import sbtdatabricks.util._
 import Keys._
 import scala.collection.mutable.{HashMap => MutHashMap, MultiMap => MutMultiMap, Set => MutSet}
 

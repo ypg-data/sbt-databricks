@@ -13,7 +13,6 @@ import org.mockito.stubbing.Answer
 import org.scalatest.mock.MockitoSugar.{mock => mmock}
 
 import sbtdatabricks._
-import sbtdatabricks.util._
 import sbtdatabricks.DatabricksPlugin._
 import sbtdatabricks.DatabricksPlugin.autoImport._
 
