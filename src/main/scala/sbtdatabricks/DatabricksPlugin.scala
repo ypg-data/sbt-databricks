@@ -376,8 +376,40 @@ case class LibraryStatus(
     statuses: List[LibraryClusterStatus])
 case class LibraryClusterStatus(clusterId: String, status: String)
 case class ContextId(id: String)
-case class ContextStatus(status: String, id: String)
+case class ContextStatus(status: String, id: String) {
+  override def toString: String = {
+    status match {
+      case DBCContextError.status =>
+        s"An error occurred within execution context '$id'"
+      case _ =>
+        s"The status of the execution context is '$status'"
+    }
+  }
+}
 case class CommandId(id: String)
 // This handles only text results - not table results - adjust
-case class CommandResults(resultType: String, data: Option[String] = None, cause: Option[String] = None)
-case class CommandStatus(status: String, id: String, results: CommandResults)
+case class CommandResults(
+    resultType: String,
+    data: Option[String] = None,
+    cause: Option[String] = None) {
+  override def toString: String = {
+    resultType match {
+      case "error" =>
+        s"An error occurred during execution with the following cause '${cause.get}'"
+      case _ =>
+        s"The following results were returned:\n ${data.get}"
+    }
+  }
+}
+case class CommandStatus(status: String, id: String, results: CommandResults) {
+  override def toString: String = {
+    status match {
+      case DBCCommandError.status =>
+        s"An error occurred within command '$id'"
+      case DBCCommandFinished.status =>
+        results.toString
+      case _ =>
+        s"The status of this command is '$status'"
+    }
+  }
+}
