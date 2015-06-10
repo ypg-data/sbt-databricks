@@ -1,4 +1,4 @@
-package sbtdatabricks
+package sbtdatabricks.util
 
 sealed trait DBCExecutionLanguage { val is: String }
 case object DBCScala extends DBCExecutionLanguage { override val is = "scala" }

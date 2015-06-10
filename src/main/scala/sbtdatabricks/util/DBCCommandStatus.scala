@@ -1,4 +1,4 @@
-package sbtdatabricks
+package sbtdatabricks.util
 
 sealed trait DBCCommandStatus { val status: String }
 case object DBCCommandQueued extends DBCCommandStatus { override val status = "Queued" }

@@ -38,6 +38,7 @@ import sbt._
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ArrayBuffer
 
+import sbtdatabricks.util._
 import sbtdatabricks.DatabricksPlugin.ClusterName
 import sbtdatabricks.DatabricksPlugin.autoImport.DBC_ALL_CLUSTERS
 
@@ -167,7 +168,8 @@ class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintSt
   private[sbtdatabricks] def createContext(
       language: DBCExecutionLanguage,
       cluster: Cluster): ContextId = {
-    outputStream.println(s"Creating '${language.is}' execution context on cluster '${cluster.name}'")
+    val msg = s"Creating '${language.is}' execution context on cluster '${cluster.name}'"
+    outputStream.println(msg)
     val post = new HttpPost(endpoint + CONTEXT_CREATE)
     val request = CreateContextRequestV1(language.is, cluster.id)
     val form = new StringEntity(mapper.writeValueAsString(request))
@@ -188,7 +190,8 @@ class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintSt
   private[sbtdatabricks] def checkContext(
       contextId: ContextId,
       cluster: Cluster): ContextStatus = {
-    outputStream.println(s"Checking execution context '${contextId.id}' on cluster '${cluster.name}'")
+    val msg = s"Checking execution context '${contextId.id}' on cluster '${cluster.name}'"
+    outputStream.println(msg)
     val form =
       URLEncodedUtils.format(List(new BasicNameValuePair("clusterId", cluster.id),
                                   new BasicNameValuePair("contextId", contextId.id)), "utf-8")
@@ -210,7 +213,8 @@ class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintSt
   private[sbtdatabricks] def destroyContext(
       contextId: ContextId,
       cluster: Cluster): ContextId = {
-    outputStream.println(s"Terminating execution context '${contextId.id}' on cluster '${cluster.name}'")
+    val msg = s"Terminating execution context '${contextId.id}' on cluster '${cluster.name}'"
+    outputStream.println(msg)
     val post = new HttpPost(endpoint + CONTEXT_DESTROY)
     val request = DestroyContextRequestV1(cluster.id, contextId.id)
     val form = new StringEntity(mapper.writeValueAsString(request))
@@ -265,7 +269,8 @@ class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintSt
       cluster: Cluster,
       contextId: ContextId,
       commandId: CommandId): CommandStatus = {
-    outputStream.println(s"Checking status of command '${commandId.id}' on cluster '${cluster.name}'")
+    val msg = s"Checking status of command '${commandId.id}' on cluster '${cluster.name}'"
+    outputStream.println(msg)
     val form =
       URLEncodedUtils.format(List(new BasicNameValuePair("clusterId", cluster.id),
                                   new BasicNameValuePair("contextId", contextId.id),

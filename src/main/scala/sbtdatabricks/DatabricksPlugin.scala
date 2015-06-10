@@ -17,6 +17,7 @@
 package sbtdatabricks
 
 import sbt._
+import sbtdatabricks.util._
 import Keys._
 import scala.collection.mutable.{HashMap => MutHashMap, MultiMap => MutMultiMap, Set => MutSet}
 
@@ -44,9 +45,8 @@ object DatabricksPlugin extends AutoPlugin {
     val dbcRestartClusters = taskKey[Unit]("Restart the given clusters.")
     val dbcExecuteCommand = taskKey[Seq[CommandStatus]]("Execute a command on a particular cluster")
     val dbcCommandFile = taskKey[File]("Location of file containing the command to be executed")
-    val dbcExecutionLanguage = taskKey[DBCExecutionLanguage]("""Which language is to be used when executing
-                                                                a command""".stripMargin)
-
+    val dbcExecutionLanguage =
+      taskKey[DBCExecutionLanguage]("""Which language is to be used when executing a command""")
     val dbcApiUrl = taskKey[String]("The URL for the DB API endpoint")
     val dbcUsername = taskKey[String]("The username for Databricks Cloud")
     val dbcPassword = taskKey[String]("The password for Databricks Cloud")
@@ -226,7 +226,10 @@ object DatabricksPlugin extends AutoPlugin {
     }
 
     @annotation.tailrec
-    def onCommandCompletion(cluster: Cluster, contextId: ContextId, commandId: CommandId) : Option[CommandId] = {
+    def onCommandCompletion(
+        cluster: Cluster,
+        contextId: ContextId,
+        commandId: CommandId) : Option[CommandId] = {
       val commandStatus = client.checkCommand(cluster, contextId, commandId)
       commandStatus.status match {
         case DBCCommandFinished.status =>

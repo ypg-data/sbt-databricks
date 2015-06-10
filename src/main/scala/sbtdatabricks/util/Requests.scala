@@ -1,4 +1,4 @@
-package sbtdatabricks
+package sbtdatabricks.util
 
 private[sbtdatabricks] case class CreateContextRequestV1(
   language: String,
