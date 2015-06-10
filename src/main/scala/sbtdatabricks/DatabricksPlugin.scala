@@ -247,7 +247,7 @@ object DatabricksPlugin extends AutoPlugin {
         client.createContext(language, confirmedCluster),
         confirmedCluster)
 
-      contextId.foreach( cId => {
+      contextId.foreach { cId =>
         val commandId = onCommandCompletion(
           confirmedCluster,
           cId,
@@ -255,7 +255,7 @@ object DatabricksPlugin extends AutoPlugin {
         if (commandId.isDefined) {
           client.destroyContext(cId, confirmedCluster)
         }
-      })
+      }
     }
     commandStatuses
   }
