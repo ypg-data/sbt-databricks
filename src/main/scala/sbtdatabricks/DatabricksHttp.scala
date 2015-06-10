@@ -378,59 +378,55 @@ class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintSt
    */
   private[sbtdatabricks] def foreachCluster(
     onClusters: Iterable[String],
-    allClusters: Seq[Cluster])(f: Cluster => Unit): Unit =
-    {
-      require(onClusters.nonEmpty, "Please specify a cluster.")
-      val hasAllClusters = onClusters.find(_ == DBC_ALL_CLUSTERS)
-      if (hasAllClusters.isDefined) {
-        allClusters.foreach { cluster =>
-          f(cluster)
+    allClusters: Seq[Cluster])(f: Cluster => Unit): Unit = {
+    require(onClusters.nonEmpty, "Please specify a cluster.")
+    val hasAllClusters = onClusters.find(_ == DBC_ALL_CLUSTERS)
+    if (hasAllClusters.isDefined) {
+      allClusters.foreach { cluster =>
+        f(cluster)
+      }
+    } else {
+      onClusters.foreach { clusterName =>
+        val givenCluster = allClusters.find(_.name == clusterName)
+        if (givenCluster.isEmpty) {
+          throw new NoSuchElementException(s"Cluster with name: $clusterName not found!")
         }
-      } else {
-        onClusters.foreach { clusterName =>
-          val givenCluster = allClusters.find(_.name == clusterName)
-          if (givenCluster.isEmpty) {
-            throw new NoSuchElementException(s"Cluster with name: $clusterName not found!")
-          }
-          givenCluster.foreach { cluster =>
-            f(cluster)
-          }
+        givenCluster.foreach { cluster =>
+          f(cluster)
         }
       }
     }
+  }
 }
 
 object DatabricksHttp {
 
   /** Create an SSL client to handle communication. */
-  private[sbtdatabricks] def getApiClient(
-    username: String,
-    password: String): HttpClient =
-    {
-      val builder = new SSLContextBuilder()
-      builder.loadTrustMaterial(null, new TrustSelfSignedStrategy())
-      val sslsf = new SSLConnectionSocketFactory(builder.build())
+  private[sbtdatabricks] def getApiClient(username: String, password: String): HttpClient = {
 
-      val provider = new BasicCredentialsProvider
-      val credentials = new UsernamePasswordCredentials(username, password)
-      provider.setCredentials(AuthScope.ANY, credentials)
+    val builder = new SSLContextBuilder()
+    builder.loadTrustMaterial(null, new TrustSelfSignedStrategy())
+    val sslsf = new SSLConnectionSocketFactory(builder.build())
 
-      val client =
-        HttpClients.custom()
-          .setSSLSocketFactory(sslsf)
-          .setDefaultCredentialsProvider(provider)
-          .build()
-      client
-    }
+    val provider = new BasicCredentialsProvider
+    val credentials = new UsernamePasswordCredentials(username, password)
+    provider.setCredentials(AuthScope.ANY, credentials)
+
+    val client =
+      HttpClients.custom()
+        .setSSLSocketFactory(sslsf)
+        .setDefaultCredentialsProvider(provider)
+        .build()
+    client
+  }
 
   private[sbtdatabricks] def apply(
     endpoint: String,
     username: String,
-    password: String): DatabricksHttp =
-    {
-      val cli = DatabricksHttp.getApiClient(username, password)
-      new DatabricksHttp(endpoint, cli)
-    }
+    password: String): DatabricksHttp = {
+    val cli = DatabricksHttp.getApiClient(username, password)
+    new DatabricksHttp(endpoint, cli)
+  }
 
   /** Returns a mock testClient */
   def testClient(client: HttpClient, file: File): DatabricksHttp = {
