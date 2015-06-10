@@ -164,7 +164,9 @@ class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintSt
    * @return The id of the execution context
    *
    */
-  private[sbtdatabricks] def createContext(language: DBCExecutionLanguage, cluster: Cluster): ContextId = {
+  private[sbtdatabricks] def createContext(
+      language: DBCExecutionLanguage,
+      cluster: Cluster): ContextId = {
     outputStream.println(s"Creating '${language.is}' execution context on cluster '${cluster.name}'")
     val post = new HttpPost(endpoint + CONTEXT_CREATE)
     val request = CreateContextRequestV1(language.is, cluster.id)
@@ -174,7 +176,6 @@ class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintSt
     val response = client.execute(post)
     val handler = new BasicResponseHandler()
     val responseString = handler.handleResponse(response).trim
-    outputStream.println(s"Creating Context: Received the following response: '${responseString}'")
     mapper.readValue[ContextId](responseString)
   }
 
@@ -184,7 +185,9 @@ class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintSt
    * @param cluster the relevant cluster
    * @return status of the execution context
    */
-  private[sbtdatabricks] def checkContext(contextId: ContextId, cluster: Cluster): ContextStatus = {
+  private[sbtdatabricks] def checkContext(
+      contextId: ContextId,
+      cluster: Cluster): ContextStatus = {
     outputStream.println(s"Checking execution context '${contextId.id}' on cluster '${cluster.name}'")
     val form =
       URLEncodedUtils.format(List(new BasicNameValuePair("clusterId", cluster.id),
@@ -193,8 +196,9 @@ class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintSt
     val response = client.execute(request)
     val handler = new BasicResponseHandler()
     val responseString = handler.handleResponse(response).trim
-    outputStream.println(s"Checking Context: Received the following response: '${responseString}'")
-    mapper.readValue[ContextStatus](responseString)
+    val contextStatus = mapper.readValue[ContextStatus](responseString)
+    outputStream.println(contextStatus.toString)
+    contextStatus
   }
 
   /**
@@ -203,7 +207,9 @@ class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintSt
    * @param cluster the relevant cluster
    * @return the id of the execution context
    */
-  private[sbtdatabricks] def destroyContext(contextId: ContextId, cluster: Cluster): ContextId = {
+  private[sbtdatabricks] def destroyContext(
+      contextId: ContextId,
+      cluster: Cluster): ContextId = {
     outputStream.println(s"Terminating execution context '${contextId.id}' on cluster '${cluster.name}'")
     val post = new HttpPost(endpoint + CONTEXT_DESTROY)
     val request = DestroyContextRequestV1(cluster.id, contextId.id)
@@ -213,7 +219,6 @@ class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintSt
     val response = client.execute(post)
     val handler = new BasicResponseHandler()
     val responseString = handler.handleResponse(response).trim
-    outputStream.println(s"Destroying Context: Received the following response: '${responseString}'")
     mapper.readValue[ContextId](responseString)
   }
 
@@ -245,7 +250,6 @@ class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintSt
     val response = client.execute(post)
     val handler = new BasicResponseHandler()
     val responseString = handler.handleResponse(response).trim
-    outputStream.println(s"Execute Command: Received the following response: '${responseString}'")
     mapper.readValue[CommandId](responseString)
   }
 
@@ -270,8 +274,9 @@ class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintSt
     val response = client.execute(request)
     val handler = new BasicResponseHandler()
     val responseString = handler.handleResponse(response).trim
-    outputStream.println(s"Check Command: Received the following response: '${responseString}'")
-    mapper.readValue[CommandStatus](responseString)
+    val commandStatus = mapper.readValue[CommandStatus](responseString)
+    outputStream.println(commandStatus.toString)
+    commandStatus
   }
 
   /**
@@ -295,7 +300,6 @@ class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintSt
     val response = client.execute(post)
     val handler = new BasicResponseHandler()
     val responseString = handler.handleResponse(response).trim
-    outputStream.println(s"Cancel Command: Received the following response: '${responseString}'")
     mapper.readValue[CommandId](responseString)
   }
 

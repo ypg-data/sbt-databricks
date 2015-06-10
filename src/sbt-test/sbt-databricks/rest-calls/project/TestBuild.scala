@@ -439,7 +439,8 @@ object TestBuild extends Build {
     val commandIdStr = mapper.writeValueAsString(commandId)
     val commandStatusRunning = CommandStatus("Running", "1234", null)
     val commandStatusRunningStr = mapper.writeValueAsString(commandStatusRunning)
-    val commandStatusFinished = CommandStatus("Finished", "1234", null)
+    val commandResults = CommandResults(resultType = "text", data = Some("{Job ran ok!!}"))
+    val commandStatusFinished = CommandStatus("Finished", "1234", commandResults)
     val commandStatusFinishedStr = mapper.writeValueAsString(commandStatusFinished)
     val clusterList = mapper.writeValueAsString(exampleClusters)
 
@@ -471,14 +472,11 @@ object TestBuild extends Build {
       TaskKey[Unit]("test") := {
         dbcExecuteCommand.value
         val out = Source.fromFile(outputFile).getLines().toSeq
-        if (out.length != 14) sys.error("Wrong number of messages printed.")
-        if (!out(1).contains("Creating Context")) sys.error("Creating context message not printed")
-        if (!out(3).contains("Checking Context")) sys.error("Checking Context message not printed")
-        if (!out(5).contains("Checking Context")) sys.error("Checking Context message not printed")
-        if (!out(7).contains("Execute Command")) sys.error("Execute command message not printed")
-        if (!out(9).contains("Check Command")) sys.error("Check command message not printed")
-        if (!out(11).contains("Check Command")) sys.error("Check command message not printed")
-        if (!out(13).contains("Destroying Context")) sys.error("Destroying message not printed")
+        if (out.length != 12) sys.error("Wrong number of messages printed.")
+        if (!out(2).contains("Pending")) sys.error("Pending context message not printed")
+        if (!out(4).contains("Running")) sys.error("Running context message not printed")
+        if (!out(7).contains("Running")) sys.error("Running command message not printed")
+        if (!out(10).contains("Job ran ok")) sys.error("Data from command completion not printed")
       }
     )
   }
@@ -522,13 +520,9 @@ object TestBuild extends Build {
       TaskKey[Unit]("test") := {
         dbcExecuteCommand.value
         val out = Source.fromFile(outputFile).getLines().toSeq
-        if (out.length != 12) sys.error("Wrong number of messages printed.")
-        if (!out(1).contains("Creating Context")) sys.error("Creating context message not printed")
-        if (!out(3).contains("Checking Context")) sys.error("Checking Context message not printed")
-        if (!out(5).contains("Execute Command")) sys.error("Execute command message not printed")
-        if (!out(7).contains("Check Command")) sys.error("Execute command message not printed")
-        if (!out(9).contains("Cancel Command")) sys.error("Check command message not printed")
-        if (!out(11).contains("Destroying Context")) sys.error("Check command message not printed")
+        if (out.length != 8) sys.error("Wrong number of messages printed.")
+        if (!out(2).contains("Running")) sys.error("Running context message not printed")
+        if (!out(5).contains("An error")) sys.error("Command with error message not printed")
       }
     )
   }
