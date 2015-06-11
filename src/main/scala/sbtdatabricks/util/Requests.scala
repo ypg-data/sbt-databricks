@@ -16,6 +16,12 @@
 
 package sbtdatabricks
 
+import org.apache.http.entity.StringEntity
+import com.fasterxml.jackson.databind.ObjectMapper
+
+import sbtdatabricks.DatabricksPlugin.autoImport.{DBCExecutionLanguage, DBCScala, DBCPython, DBCSQL}
+import DBApiEndpoints._
+
 private[sbtdatabricks] case class CreateContextRequestV1(
   language: String,
   clusterId: String
@@ -31,3 +37,52 @@ private[sbtdatabricks] case class CancelCommandRequestV1(
   contextId: String,
   commandId: String
 )
+
+private[sbtdatabricks] trait PostInputs {
+  def initialMessage: String
+  val requestCC: Product
+  val dbAPIEndPoint: String
+  def createForm(mapper: ObjectMapper): StringEntity = {
+   new StringEntity(mapper.writeValueAsString(requestCC))
+  }
+}
+
+private[sbtdatabricks] case class CreateContextInputV1(
+  language: DBCExecutionLanguage,
+  cluster: Cluster
+) extends PostInputs {
+  def initialMessage: String = {
+    s"Creating '${language.is}' execution context on cluster '${cluster.name}'"
+  }
+
+  val requestCC = CreateContextRequestV1(language.is, cluster.id)
+
+  val dbAPIEndPoint = CONTEXT_CREATE
+}
+
+private[sbtdatabricks] case class DestroyContextInputV1(
+  cluster: Cluster,
+  contextId: ContextId
+) extends PostInputs {
+  def initialMessage: String = {
+    s"Terminating execution context '${contextId.id}' on cluster '${cluster.name}'"
+  }
+
+  val requestCC = DestroyContextRequestV1(cluster.id, contextId.id)
+
+  val dbAPIEndPoint = CONTEXT_DESTROY
+}
+
+private[sbtdatabricks] case class CancelCommandInputV1(
+  cluster: Cluster,
+  contextId: ContextId,
+  commandId: CommandId
+) extends PostInputs {
+  def initialMessage: String = {
+    s"Cancelling command '${commandId.id}' on cluster '${cluster.name}'"
+  }
+
+  val requestCC = CancelCommandRequestV1(cluster.id, contextId.id, commandId.id)
+
+  val dbAPIEndPoint = COMMAND_CANCEL
+}

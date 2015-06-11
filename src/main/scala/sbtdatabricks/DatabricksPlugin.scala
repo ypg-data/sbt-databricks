@@ -220,7 +220,7 @@ object DatabricksPlugin extends AutoPlugin {
       contextStatus.status match {
         case DBCContextRunning.status => Some(contextId)
         case DBCContextError.status =>
-          client.destroyContext(contextId, cluster)
+          client.destroyContext(cluster, contextId)
           None
         case _ =>
           Thread sleep 500
@@ -240,7 +240,7 @@ object DatabricksPlugin extends AutoPlugin {
           Some(commandId)
         case DBCCommandError.status =>
           client.cancelCommand(cluster, contextId, commandId)
-          client.destroyContext(contextId, cluster)
+          client.destroyContext(cluster, contextId)
           None
         case _ =>
           Thread sleep 3000
@@ -263,7 +263,7 @@ object DatabricksPlugin extends AutoPlugin {
           cId,
           client.executeCommand(language, confirmedCluster, cId, commandFile))
         if (commandId.isDefined) {
-          client.destroyContext(cId, confirmedCluster)
+          client.destroyContext(confirmedCluster, cId)
         }
       }
     }
@@ -385,7 +385,8 @@ case class LibraryStatus(
     attachAllClusters: Boolean,
     statuses: List[LibraryClusterStatus])
 case class LibraryClusterStatus(clusterId: String, status: String)
-case class ContextId(id: String)
+sealed trait Responses
+case class ContextId(id: String) extends Responses
 case class ContextStatus(status: String, id: String) {
   override def toString: String = {
     status match {
@@ -396,7 +397,7 @@ case class ContextStatus(status: String, id: String) {
     }
   }
 }
-case class CommandId(id: String)
+case class CommandId(id: String) extends Responses
 // This handles only text results - not table results - adjust
 case class CommandResults(
     resultType: String,
