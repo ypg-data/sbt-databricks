@@ -219,7 +219,7 @@ object DatabricksPlugin extends AutoPlugin {
       contextStatus.status match {
         case DBCContextRunning.status => Some(contextId)
         case DBCContextError.status =>
-          client.destroyContext(contextId, cluster)
+          client.destroyContext(cluster, contextId)
           None
         case _ =>
           Thread sleep 500
@@ -239,7 +239,7 @@ object DatabricksPlugin extends AutoPlugin {
           Some(commandId)
         case DBCCommandError.status =>
           client.cancelCommand(cluster, contextId, commandId)
-          client.destroyContext(contextId, cluster)
+          client.destroyContext(cluster, contextId)
           None
         case _ =>
           Thread sleep 3000
@@ -262,7 +262,7 @@ object DatabricksPlugin extends AutoPlugin {
           cId,
           client.executeCommand(language, confirmedCluster, cId, commandFile))
         if (commandId.isDefined) {
-          client.destroyContext(cId, confirmedCluster)
+          client.destroyContext(confirmedCluster, cId)
         }
       }
     }
@@ -361,6 +361,7 @@ object DatabricksPlugin extends AutoPlugin {
   override lazy val projectSettings: Seq[Setting[_]] = baseDBCSettings
 }
 
+sealed trait Responses
 case class UploadedLibraryId(id: String)
 case class UploadedLibrary(name: String, jar: File, id: String)
 case class Cluster(
@@ -374,6 +375,7 @@ case class Cluster(
     s"Cluster Name: $name, Status: $status, Number of Workers: $numWorkers."
   }
 }
+case class ClusterId(id: String) extends Responses
 case class LibraryListResult(id: String, name: String, folder: String)
 case class LibraryStatus(
     id: String,
@@ -384,7 +386,8 @@ case class LibraryStatus(
     attachAllClusters: Boolean,
     statuses: List[LibraryClusterStatus])
 case class LibraryClusterStatus(clusterId: String, status: String)
-case class ContextId(id: String)
+case class LibraryId(id: String) extends Responses
+case class ContextId(id: String) extends Responses
 case class ContextStatus(status: String, id: String) {
   override def toString: String = {
     status match {
@@ -395,7 +398,8 @@ case class ContextStatus(status: String, id: String) {
     }
   }
 }
-case class CommandId(id: String)
+case class CommandId(id: String) extends Responses
+case class EmptyResponse() extends Responses
 // This handles only text results - not table results - adjust
 case class CommandResults(
     resultType: String,

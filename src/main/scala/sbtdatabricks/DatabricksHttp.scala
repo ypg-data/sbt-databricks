@@ -168,15 +168,7 @@ class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintSt
   private[sbtdatabricks] def createContext(
       language: DBCExecutionLanguage,
       cluster: Cluster): ContextId = {
-    val msg = s"Creating '${language.is}' execution context on cluster '${cluster.name}'"
-    outputStream.println(msg)
-    val post = new HttpPost(endpoint + CONTEXT_CREATE)
-    val content = CreateContextRequestV1(language.is, cluster.id)
-    setJsonRequest(content, post)
-    val response = client.execute(post)
-    val handler = new BasicResponseHandler()
-    val responseString = handler.handleResponse(response).trim
-    mapper.readValue[ContextId](responseString)
+    postWrapper[ContextId](CreateContextInputV1(language, cluster))
   }
 
   /**
@@ -209,17 +201,9 @@ class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintSt
    * @return the id of the execution context
    */
   private[sbtdatabricks] def destroyContext(
-      contextId: ContextId,
-      cluster: Cluster): ContextId = {
-    val msg = s"Terminating execution context on cluster '${cluster.name}'"
-    outputStream.println(msg)
-    val post = new HttpPost(endpoint + CONTEXT_DESTROY)
-    val content = DestroyContextRequestV1(cluster.id, contextId.id)
-    setJsonRequest(content, post)
-    val response = client.execute(post)
-    val handler = new BasicResponseHandler()
-    val responseString = handler.handleResponse(response).trim
-    mapper.readValue[ContextId](responseString)
+      cluster: Cluster,
+      contextId: ContextId): ContextId = {
+    postWrapper[ContextId](DestroyContextInputV1(cluster, contextId))
   }
 
 
@@ -292,14 +276,7 @@ class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintSt
       cluster: Cluster,
       contextId: ContextId,
       commandId: CommandId): CommandId = {
-    outputStream.println(s"Cancelling command on cluster '${cluster.name}'")
-    val post = new HttpPost(endpoint + COMMAND_CANCEL)
-    val content = CancelCommandRequestV1(cluster.id, contextId.id, commandId.id)
-    setJsonRequest(content, post)
-    val response = client.execute(post)
-    val handler = new BasicResponseHandler()
-    val responseString = handler.handleResponse(response).trim
-    mapper.readValue[CommandId](responseString)
+    postWrapper[CommandId](CancelCommandInputV1(cluster, contextId, commandId))
   }
 
   /**
@@ -308,14 +285,10 @@ class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintSt
    * @param cluster The cluster to attach the library to
    * @return Response from Databricks Cloud
    */
-  private[sbtdatabricks] def attachToCluster(library: UploadedLibrary, cluster: Cluster): String = {
-    outputStream.println(s"Attaching ${library.name} to cluster '${cluster.name}'")
-    val post = new HttpPost(endpoint + LIBRARY_ATTACH)
-    val content = LibraryAttachRequestV1(library.id, cluster.id)
-    setJsonRequest(content, post)
-    val response = client.execute(post)
-    val handler = new BasicResponseHandler()
-    handler.handleResponse(response)
+  private[sbtdatabricks] def attachToCluster(
+      library: UploadedLibrary,
+      cluster: Cluster): ClusterId = {
+    postWrapper[ClusterId](LibraryAttachInputV1(library, cluster))
   }
 
   /**
@@ -346,14 +319,8 @@ class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintSt
   }
 
   /** Restart a cluster */
-  private[sbtdatabricks] def restartCluster(cluster: Cluster): String = {
-    outputStream.println(s"Restarting cluster: ${cluster.name}")
-    val post = new HttpPost(endpoint + CLUSTER_RESTART)
-    val content = RestartClusterRequestV1(cluster.id)
-    setJsonRequest(content, post)
-    val response = client.execute(post)
-    val handler = new BasicResponseHandler()
-    handler.handleResponse(response)
+  private[sbtdatabricks] def restartCluster(cluster: Cluster): ClusterId = {
+    postWrapper[ClusterId](RestartClusterInputV1(cluster))
   }
 
   /**
@@ -383,6 +350,23 @@ class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintSt
         }
       }
     }
+  }
+
+
+  /**
+   * Wrapper for the basic post commands
+   * @param input case class with the relevant post settings
+   * @return Response case class
+   *
+   */
+  private[sbtdatabricks] def postWrapper[T<:Responses: Manifest](input: PostInputs): T = {
+    outputStream.println(input.initialMessage)
+    val post = new HttpPost(endpoint + input.dbAPIEndPoint)
+    setJsonRequest(input.requestCC, post)
+    val response = client.execute(post)
+    val handler = new BasicResponseHandler()
+    val responseString = handler.handleResponse(response).trim
+    mapper.readValue[T](responseString)
   }
 
   private def setJsonRequest(contents: DBApiRequest, post: HttpPost): Unit = {
