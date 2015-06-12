@@ -51,6 +51,42 @@ class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintSt
   mapper.registerModule(DefaultScalaModule)
 
   /**
+   * Create a cluster
+   * @param name of the cluster to be created
+   * @param memoryGB size in memory (GB) of the new cluster
+   * @param useSpot if true spot instances used, otherwise on-demand instances
+   * @return The id of the newly created cluster
+   *
+   */
+  private[sbtdatabricks] def createCluster(
+      name: String,
+      memoryGB: Integer,
+      useSpot: Boolean): ClusterId = {
+    postWrapper[ClusterId](CreateClusterInputV1(name, memoryGB, useSpot))
+  }
+
+  /**
+   * Delete a cluster
+   * @param cluster the cluster to be deleted
+   * @return The id of the deleted cluster
+   */
+  private[sbtdatabricks] def deleteCluster(
+      cluster: Cluster): ClusterId = {
+    postWrapper[ClusterId](DeleteClusterInputV1(cluster))
+  }
+
+  /**
+   * Resize a cluster
+   * @param cluster the cluster to be resized
+   * @return The id of the deleted cluster
+   */
+  private[sbtdatabricks] def resizeCluster(
+      cluster: Cluster,
+      memoryGB: Integer): ClusterId = {
+    postWrapper[ClusterId](ResizeClusterInputV1(cluster, memoryGB))
+  }
+
+  /**
    * Upload a jar to Databrics Cloud
    * @param name Name of the library to show on Databricks Cloud
    * @param file The jar file

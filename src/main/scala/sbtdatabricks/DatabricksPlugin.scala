@@ -50,6 +50,11 @@ object DatabricksPlugin extends AutoPlugin {
     val dbcPassword = taskKey[String]("The password for Databricks Cloud")
     val dbcClasspath = taskKey[Seq[File]]("Defines the dependencies (jars) " +
       "which should be uploaded.")
+    val dbcCreateCluster = taskKey[Seq[ClusterId]]("Execute a command to create a cluster/clusters")
+    val dbcMemorySize = taskKey[Integer]("Size of the cluster in memory (GB)")
+    val dbcSpotInstance = taskKey[Boolean]("Dictates whether spot or on-demand instances used")
+    val dbcDeleteCluster = taskKey[Seq[ClusterId]]("Execute a command to delete a cluster/clusters")
+    val dbcResizeCluster = taskKey[Seq[ClusterId]]("Execute a command to resize a cluster/clusters")
 
     final val DBC_ALL_CLUSTERS = "ALL_CLUSTERS"
 
@@ -148,6 +153,41 @@ object DatabricksPlugin extends AutoPlugin {
       new UploadedLibrary(jar.getName, jar, uploadedLib.id)
     }.toSeq
     (uploaded, toDelete)
+  }
+
+  private lazy val createClusterImpl: Def.Initialize[Task[Seq[ClusterId]]] = Def.task {
+      val client = dbcApiClient.value
+      val onClusters = dbcClusters.value
+      val memory = dbcMemorySize.value
+      val spot = dbcSpotInstance.value
+      val clusterIds = Seq.empty[ClusterId]
+
+      onClusters.map(client.createCluster(_, memory, spot))
+  }
+
+  private lazy val deleteClusterImpl: Def.Initialize[Task[Seq[ClusterId]]] = Def.task {
+    val client = dbcApiClient.value
+    val onClusters = dbcClusters.value
+    val (allClusters, _) = dbcFetchClusters.value
+    val clusterIds = Seq.empty[ClusterId]
+
+    client.foreachCluster(onClusters, allClusters) { confirmedCluster =>
+      clusterIds :+ client.deleteCluster(confirmedCluster)
+    }
+    clusterIds
+  }
+
+  private lazy val resizeClusterImpl: Def.Initialize[Task[Seq[ClusterId]]] = Def.task {
+    val client = dbcApiClient.value
+    val onClusters = dbcClusters.value
+    val memory = dbcMemorySize.value
+    val (allClusters, _) = dbcFetchClusters.value
+    val clusterIds = Seq.empty[ClusterId]
+
+    client.foreachCluster(onClusters, allClusters) { confirmedCluster =>
+      clusterIds :+ client.resizeCluster(confirmedCluster, memory)
+    }
+    clusterIds
   }
 
   // Delete old SNAPSHOT versions in the Classpath on DBC, and upload all jars that don't exist.
@@ -316,6 +356,22 @@ object DatabricksPlugin extends AutoPlugin {
           |  See the sbt-databricks README for more info.
         """.stripMargin)
     },
+    dbcMemorySize := {
+      sys.error(
+        """
+          |dbcMemorySize not defined. Please make sure to add this key
+          |  to your build when using dbcCreateCluster or dbcResizeCluster
+          |  See the sbt-databricks README for more info.
+        """.stripMargin)
+    },
+    dbcSpotInstance := {
+      sys.error(
+        """
+          |dbcSpotInstance not defined. Please make sure to add this key
+          |  to your build when using dbcCreateCluster
+          |  See the sbt-databricks README for more info.
+        """.stripMargin)
+    },
     dbcClusters := Seq.empty[String],
     dbcRestartOnAttach := true,
     dbcLibraryPath := "/",
@@ -355,7 +411,10 @@ object DatabricksPlugin extends AutoPlugin {
       }
     },
     dbcDeploy := deployImpl.value,
-    dbcExecuteCommand := executeCommandImpl.value
+    dbcExecuteCommand := executeCommandImpl.value,
+    dbcCreateCluster := createClusterImpl.value,
+    dbcDeleteCluster := deleteClusterImpl.value,
+    dbcResizeCluster := resizeClusterImpl.value
   )
 
   override lazy val projectSettings: Seq[Setting[_]] = baseDBCSettings

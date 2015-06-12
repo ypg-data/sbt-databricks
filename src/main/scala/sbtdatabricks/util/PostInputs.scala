@@ -89,3 +89,42 @@ private[sbtdatabricks] case class RestartClusterInputV1(
 
   val dbAPIEndPoint = CLUSTER_RESTART
 }
+
+private[sbtdatabricks] case class CreateClusterInputV1(
+  name: String,
+  memoryGB: Integer,
+  useSpot: Boolean
+) extends PostInputs {
+  def initialMessage: String = {
+    s"Creating cluster: ${name}"
+  }
+
+  val requestCC = CreateClusterRequestV1(name, memoryGB, useSpot)
+
+  val dbAPIEndPoint = CLUSTER_CREATE
+}
+
+private[sbtdatabricks] case class ResizeClusterInputV1(
+  cluster: Cluster,
+  memoryGB: Integer
+) extends PostInputs {
+  def initialMessage: String = {
+    s"Resizing cluster: ${cluster.name}"
+  }
+
+  val requestCC = ResizeClusterRequestV1(cluster.id, memoryGB)
+
+  val dbAPIEndPoint = CLUSTER_RESIZE
+}
+
+private[sbtdatabricks] case class DeleteClusterInputV1(
+  cluster: Cluster
+) extends PostInputs {
+  def initialMessage: String = {
+    s"Deleting cluster: ${cluster.name}"
+  }
+
+  val requestCC = DeleteClusterRequestV1(cluster.id)
+
+  val dbAPIEndPoint = CLUSTER_DELETE
+}
