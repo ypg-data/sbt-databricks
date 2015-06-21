@@ -62,7 +62,13 @@ class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintSt
       name: String,
       memoryGB: Integer,
       useSpot: Boolean): ClusterId = {
-    postWrapper[ClusterId](CreateClusterInputV1(name, memoryGB, useSpot))
+    val checkExistingClusters = fetchClusters.filter(_.name == name)
+    if (!checkExistingClusters.isEmpty) {
+      outputStream.println(s"Cluster with name '$name' already exists")
+      ClusterId("")
+    } else {
+      postWrapper[ClusterId](CreateClusterInputV1(name, memoryGB, useSpot))
+    }
   }
 
   /**
@@ -395,7 +401,7 @@ class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintSt
    * @return Response case class
    *
    */
-  private[sbtdatabricks] def postWrapper[T<:Responses: Manifest](input: PostInputs): T = {
+  private def postWrapper[T<:Responses: Manifest](input: PostInputs): T = {
     outputStream.println(input.initialMessage)
     val post = new HttpPost(endpoint + input.dbAPIEndPoint)
     setJsonRequest(input.requestCC, post)

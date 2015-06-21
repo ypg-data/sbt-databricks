@@ -138,29 +138,11 @@ object DatabricksPlugin extends AutoPlugin {
     else set
   }
 
-  private def uploadImpl1(
-      client: DatabricksHttp,
-      folder: String,
-      cp: Seq[File],
-      existing: Seq[UploadedLibrary]): (Seq[UploadedLibrary], Seq[UploadedLibrary]) = {
-    // TODO: try to figure out dependencies with changed versions
-    val toDelete = existing.filter(_.name.contains("-SNAPSHOT"))
-    client.deleteLibraries(toDelete)
-    // Either upload the newer SNAPSHOT versions, or everything, because they don't exist yet.
-      val toUpload = cp.toSet -- existing.map(_.jar) ++ toDelete.map(_.jar)
-    val uploaded = toUpload.map { jar =>
-      val uploadedLib = client.uploadJar(jar.getName, jar, folder)
-      new UploadedLibrary(jar.getName, jar, uploadedLib.id)
-    }.toSeq
-    (uploaded, toDelete)
-  }
-
   private lazy val createClusterImpl: Def.Initialize[Task[Seq[ClusterId]]] = Def.task {
       val client = dbcApiClient.value
       val onClusters = dbcClusters.value
       val memory = dbcMemorySize.value
       val spot = dbcSpotInstance.value
-      val clusterIds = Seq.empty[ClusterId]
 
       onClusters.map(client.createCluster(_, memory, spot))
   }
@@ -177,6 +159,8 @@ object DatabricksPlugin extends AutoPlugin {
     clusterIds
   }
 
+  // ADD check for cluster status as well - add tests.
+
   private lazy val resizeClusterImpl: Def.Initialize[Task[Seq[ClusterId]]] = Def.task {
     val client = dbcApiClient.value
     val onClusters = dbcClusters.value
@@ -188,6 +172,23 @@ object DatabricksPlugin extends AutoPlugin {
       clusterIds :+ client.resizeCluster(confirmedCluster, memory)
     }
     clusterIds
+  }
+
+  private def uploadImpl1(
+      client: DatabricksHttp,
+      folder: String,
+      cp: Seq[File],
+      existing: Seq[UploadedLibrary]): (Seq[UploadedLibrary], Seq[UploadedLibrary]) = {
+    // TODO: try to figure out dependencies with changed versions
+    val toDelete = existing.filter(_.name.contains("-SNAPSHOT"))
+    client.deleteLibraries(toDelete)
+    // Either upload the newer SNAPSHOT versions, or everything, because they don't exist yet.
+      val toUpload = cp.toSet -- existing.map(_.jar) ++ toDelete.map(_.jar)
+    val uploaded = toUpload.map { jar =>
+      val uploadedLib = client.uploadJar(jar.getName, jar, folder)
+      new UploadedLibrary(jar.getName, jar, uploadedLib.id)
+    }.toSeq
+    (uploaded, toDelete)
   }
 
   // Delete old SNAPSHOT versions in the Classpath on DBC, and upload all jars that don't exist.
