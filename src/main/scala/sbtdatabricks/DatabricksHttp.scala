@@ -33,6 +33,7 @@ import org.apache.http.entity.mime.MultipartEntity
 import org.apache.http.entity.mime.content.{FileBody, StringBody}
 import org.apache.http.impl.client.{BasicResponseHandler, HttpClients, BasicCredentialsProvider}
 import org.apache.http.message.BasicNameValuePair
+import org.apache.http.HttpResponse
 
 import sbt._
 import scala.collection.JavaConversions._
@@ -42,13 +43,33 @@ import sbtdatabricks.DatabricksPlugin.ClusterName
 import sbtdatabricks.DatabricksPlugin.autoImport.DBC_ALL_CLUSTERS
 import sbtdatabricks.util.requests._
 
+import scala.util.{Try, Success, Failure}
+import spray.json._
+import DefaultJsonProtocol._
+
 /** Collection of REST calls to Databricks Cloud and related helper functions. Exposed for tests */
 class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintStream = System.out) {
+
+  case class ErrorMsg(val error: String)
+  object ErrorMsgProtocol extends DefaultJsonProtocol {
+    implicit val errorMsgFormat = jsonFormat1(ErrorMsg)
+  }
+  import ErrorMsgProtocol._
 
   import DBApiEndpoints._
 
   private val mapper = new ObjectMapper() with ScalaObjectMapper
   mapper.registerModule(DefaultScalaModule)
+
+  private def handleResponse[T](response: HttpResponse, f: String => T) = {
+    if(response.getStatusLine.getStatusCode == 200) {
+      val handler = new BasicResponseHandler()
+      f(handler.handleResponse(response))
+    } else {
+      val responseBody = JsonParser(scala.io.Source.fromInputStream(response.getEntity.getContent).mkString(""))
+      sys.error(responseBody.convertTo[ErrorMsg].error)
+    }
+  }
 
   /**
    * Upload a jar to Databrics Cloud
@@ -71,9 +92,7 @@ class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintSt
     entity.addPart("uri", new FileBody(file))
     post.setEntity(entity)
     val response = client.execute(post)
-    val handler = new BasicResponseHandler()
-    val stringResponse = handler.handleResponse(response)
-    mapper.readValue[UploadedLibraryId](stringResponse)
+    handleResponse(response, sr => mapper.readValue[UploadedLibraryId](sr))
   }
 
   /**
@@ -86,8 +105,7 @@ class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintSt
     val form = List(new BasicNameValuePair("libraryId", libraryId))
     post.setEntity(new UrlEncodedFormEntity(form))
     val response = client.execute(post)
-    val handler = new BasicResponseHandler()
-    handler.handleResponse(response)
+    handleResponse(response, identity)
   }
 
   /**
@@ -97,9 +115,7 @@ class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintSt
   private[sbtdatabricks] def fetchLibraries: Seq[LibraryListResult] = {
     val request = new HttpGet(endpoint + LIBRARY_LIST)
     val response = client.execute(request)
-    val handler = new BasicResponseHandler()
-    val stringResponse = handler.handleResponse(response)
-    mapper.readValue[Seq[LibraryListResult]](stringResponse)
+    handleResponse(response, sr => mapper.readValue[Seq[LibraryListResult]](sr))
   }
 
   /**
@@ -113,9 +129,7 @@ class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintSt
       URLEncodedUtils.format(List(new BasicNameValuePair("libraryId", libraryId)), "utf-8")
     val request = new HttpGet(endpoint + LIBRARY_STATUS + "?" + form)
     val response = client.execute(request)
-    val handler = new BasicResponseHandler()
-    val stringResponse = handler.handleResponse(response)
-    mapper.readValue[LibraryStatus](stringResponse)
+    handleResponse(response, sr => mapper.readValue[LibraryStatus](sr))
   }
 
   /**
@@ -174,9 +188,7 @@ class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintSt
     val content = CreateContextRequestV1(language.is, cluster.id)
     setJsonRequest(content, post)
     val response = client.execute(post)
-    val handler = new BasicResponseHandler()
-    val responseString = handler.handleResponse(response).trim
-    mapper.readValue[ContextId](responseString)
+    handleResponse(response, sr => mapper.readValue[ContextId](sr.trim))
   }
 
   /**
@@ -195,11 +207,11 @@ class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintSt
                                   new BasicNameValuePair("contextId", contextId.id)), "utf-8")
     val request = new HttpGet(endpoint + CONTEXT_STATUS + "?" + form)
     val response = client.execute(request)
-    val handler = new BasicResponseHandler()
-    val responseString = handler.handleResponse(response).trim
-    val contextStatus = mapper.readValue[ContextStatus](responseString)
-    outputStream.println(contextStatus.toString)
-    contextStatus
+    handleResponse(response, sr => {
+      val contextStatus = mapper.readValue[ContextStatus](sr.trim)
+      outputStream.println(contextStatus.toString)
+      contextStatus
+    })
   }
 
   /**
@@ -217,9 +229,7 @@ class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintSt
     val content = DestroyContextRequestV1(cluster.id, contextId.id)
     setJsonRequest(content, post)
     val response = client.execute(post)
-    val handler = new BasicResponseHandler()
-    val responseString = handler.handleResponse(response).trim
-    mapper.readValue[ContextId](responseString)
+    handleResponse(response, sr => mapper.readValue[ContextId](sr.trim))
   }
 
 
@@ -248,9 +258,7 @@ class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintSt
     post.setEntity(entity)
 
     val response = client.execute(post)
-    val handler = new BasicResponseHandler()
-    val responseString = handler.handleResponse(response).trim
-    mapper.readValue[CommandId](responseString)
+    handleResponse(response, sr => mapper.readValue[CommandId](sr.trim))
   }
 
   /**
@@ -273,11 +281,11 @@ class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintSt
                                   new BasicNameValuePair("commandId", commandId.id)), "utf-8")
     val request = new HttpGet(endpoint + COMMAND_STATUS + "?" + form)
     val response = client.execute(request)
-    val handler = new BasicResponseHandler()
-    val responseString = handler.handleResponse(response).trim
-    val commandStatus = mapper.readValue[CommandStatus](responseString)
-    outputStream.println(commandStatus.toString)
-    commandStatus
+    handleResponse(response, sr => {
+      val commandStatus = mapper.readValue[CommandStatus](sr.trim)
+      outputStream.println(commandStatus.toString)
+      commandStatus
+    })
   }
 
   /**
@@ -297,9 +305,7 @@ class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintSt
     val content = CancelCommandRequestV1(cluster.id, contextId.id, commandId.id)
     setJsonRequest(content, post)
     val response = client.execute(post)
-    val handler = new BasicResponseHandler()
-    val responseString = handler.handleResponse(response).trim
-    mapper.readValue[CommandId](responseString)
+    handleResponse(response, sr => mapper.readValue[CommandId](sr.trim))
   }
 
   /**
@@ -314,8 +320,7 @@ class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintSt
     val content = LibraryAttachRequestV1(library.id, cluster.id)
     setJsonRequest(content, post)
     val response = client.execute(post)
-    val handler = new BasicResponseHandler()
-    handler.handleResponse(response)
+    handleResponse(response, identity)
   }
 
   /**
@@ -325,9 +330,7 @@ class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintSt
   private[sbtdatabricks] def fetchClusters: Seq[Cluster] = {
     val request = new HttpGet(endpoint + CLUSTER_LIST)
     val response = client.execute(request)
-    val handler = new BasicResponseHandler()
-    val stringResponse = handler.handleResponse(response)
-    mapper.readValue[Seq[Cluster]](stringResponse)
+    handleResponse(response, sr => mapper.readValue[Seq[Cluster]](sr))
   }
 
   /**
@@ -340,9 +343,7 @@ class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintSt
       URLEncodedUtils.format(List(new BasicNameValuePair("clusterId", clusterId)), "utf-8")
     val request = new HttpGet(endpoint + CLUSTER_INFO + "?" + form)
     val response = client.execute(request)
-    val handler = new BasicResponseHandler()
-    val stringResponse = handler.handleResponse(response)
-    mapper.readValue[Cluster](stringResponse)
+    handleResponse(response, sr => mapper.readValue[Cluster](sr))
   }
 
   /** Restart a cluster */
@@ -352,8 +353,7 @@ class DatabricksHttp(endpoint: String, client: HttpClient, outputStream: PrintSt
     val content = RestartClusterRequestV1(cluster.id)
     setJsonRequest(content, post)
     val response = client.execute(post)
-    val handler = new BasicResponseHandler()
-    handler.handleResponse(response)
+    handleResponse(response, identity)
   }
 
   /**

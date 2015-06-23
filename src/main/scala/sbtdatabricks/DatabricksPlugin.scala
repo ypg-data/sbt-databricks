@@ -269,53 +269,25 @@ object DatabricksPlugin extends AutoPlugin {
     commandStatuses
   }
 
+  private val userPassApiError = 
+    """|dbcUsername not defined. Please make sure to add these keys to your build:
+       |  dbcUsername := "user"
+       |  dbcPassword := "pass"
+       |  dbcApiUrl := "https://organization.cloud.databricks.com:34563/api/1.1"
+       |  See the sbt-databricks README for more info.
+     """.stripMargin
+
+  private def notDefined(setting: String) = 
+    """| not defined. Please make sure to add this key
+       |  to your build when using dbcExecuteCommand
+       |  See the sbt-databricks README for more info.
+     """.stripMargin
   val baseDBCSettings: Seq[Setting[_]] = Seq(
-    dbcUsername := {
-      sys.error(
-        """
-          |dbcUsername not defined. Please make sure to add these keys to your build:
-          |  dbcUsername := "user"
-          |  dbcPassword := "pass"
-          |  dbcApiUrl := "https://organization.cloud.databricks.com:34563/api/1.1"
-          |  See the sbt-databricks README for more info.
-        """.stripMargin)
-    },
-    dbcPassword := {
-      sys.error(
-        """
-          |dbcPassword not defined. Please make sure to add these keys to your build:
-          |  dbcUsername := "user"
-          |  dbcPassword := "pass"
-          |  dbcApiUrl := "https://organization.cloud.databricks.com:34563/api/1.1"
-          |  See the sbt-databricks README for more info.
-        """.stripMargin)
-    },
-    dbcApiUrl := {
-      sys.error(
-        """
-          |dbcApiUrl not defined. Please make sure to add these keys to your build:
-          |  dbcUsername := "user"
-          |  dbcPassword := "pass"
-          |  dbcApiUrl := "https://organization.cloud.databricks.com:34563/api/1.1"
-          |  See the sbt-databricks README for more info.
-        """.stripMargin)
-    },
-    dbcExecutionLanguage := {
-      sys.error(
-        """
-          |dbcExecutionLanguage not defined. Please make sure to add this key
-          |  to your build when using dbcExecuteCommand
-          |  See the sbt-databricks README for more info.
-        """.stripMargin)
-    },
-    dbcCommandFile := {
-      sys.error(
-        """
-          |dbcCommandFile not defined. Please make sure to add this key
-          |  to your build when using dbcExecuteCommand
-          |  See the sbt-databricks README for more info.
-        """.stripMargin)
-    },
+    dbcUsername := sys.error(userPassApiError),
+    dbcPassword := sys.error(userPassApiError),
+    dbcApiUrl := sys.error(userPassApiError),
+    dbcExecutionLanguage := sys.error(notDefined("dbcExecutionLanguage")),
+    dbcCommandFile := sys.error(notDefined("dbcCommandFile")),
     dbcClusters := Seq.empty[String],
     dbcRestartOnAttach := true,
     dbcLibraryPath := "/",
