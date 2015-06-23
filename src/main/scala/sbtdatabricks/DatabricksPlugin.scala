@@ -50,6 +50,11 @@ object DatabricksPlugin extends AutoPlugin {
     val dbcPassword = taskKey[String]("The password for Databricks Cloud")
     val dbcClasspath = taskKey[Seq[File]]("Defines the dependencies (jars) " +
       "which should be uploaded.")
+    val dbcCreateCluster = taskKey[Seq[ClusterId]]("Execute a command to create a cluster/clusters")
+    val dbcMemorySize = taskKey[Integer]("Size of the cluster in memory (GB)")
+    val dbcSpotInstance = taskKey[Boolean]("Dictates whether spot or on-demand instances used")
+    val dbcDeleteCluster = taskKey[Seq[ClusterId]]("Execute a command to delete a cluster/clusters")
+    val dbcResizeCluster = taskKey[Seq[ClusterId]]("Execute a command to resize a cluster/clusters")
 
     final val DBC_ALL_CLUSTERS = "ALL_CLUSTERS"
 
@@ -131,6 +136,42 @@ object DatabricksPlugin extends AutoPlugin {
   private def getRealClusterList(set: Set[ClusterName], all: Seq[Cluster]): Set[ClusterName] = {
     if (set.contains(DBC_ALL_CLUSTERS)) all.map(_.name).toSet
     else set
+  }
+
+  private lazy val createClusterImpl: Def.Initialize[Task[Seq[ClusterId]]] = Def.task {
+      val client = dbcApiClient.value
+      val onClusters = dbcClusters.value
+      val memory = dbcMemorySize.value
+      val spot = dbcSpotInstance.value
+
+      onClusters.map(client.createCluster(_, memory, spot))
+  }
+
+  private lazy val deleteClusterImpl: Def.Initialize[Task[Seq[ClusterId]]] = Def.task {
+    val client = dbcApiClient.value
+    val onClusters = dbcClusters.value
+    val (allClusters, _) = dbcFetchClusters.value
+    val clusterIds = Seq.empty[ClusterId]
+
+    client.foreachCluster(onClusters, allClusters) { confirmedCluster =>
+      clusterIds :+ client.deleteCluster(confirmedCluster)
+    }
+    clusterIds
+  }
+
+  // ADD check for cluster status as well - add tests.
+
+  private lazy val resizeClusterImpl: Def.Initialize[Task[Seq[ClusterId]]] = Def.task {
+    val client = dbcApiClient.value
+    val onClusters = dbcClusters.value
+    val memory = dbcMemorySize.value
+    val (allClusters, _) = dbcFetchClusters.value
+    val clusterIds = Seq.empty[ClusterId]
+
+    client.foreachCluster(onClusters, allClusters) { confirmedCluster =>
+      clusterIds :+ client.resizeCluster(confirmedCluster, memory)
+    }
+    clusterIds
   }
 
   private def uploadImpl1(
@@ -219,7 +260,7 @@ object DatabricksPlugin extends AutoPlugin {
       contextStatus.status match {
         case DBCContextRunning.status => Some(contextId)
         case DBCContextError.status =>
-          client.destroyContext(contextId, cluster)
+          client.destroyContext(cluster, contextId)
           None
         case _ =>
           Thread sleep 500
@@ -239,7 +280,7 @@ object DatabricksPlugin extends AutoPlugin {
           Some(commandId)
         case DBCCommandError.status =>
           client.cancelCommand(cluster, contextId, commandId)
-          client.destroyContext(contextId, cluster)
+          client.destroyContext(cluster, contextId)
           None
         case _ =>
           Thread sleep 3000
@@ -262,7 +303,7 @@ object DatabricksPlugin extends AutoPlugin {
           cId,
           client.executeCommand(language, confirmedCluster, cId, commandFile))
         if (commandId.isDefined) {
-          client.destroyContext(cId, confirmedCluster)
+          client.destroyContext(confirmedCluster, cId)
         }
       }
     }
@@ -316,6 +357,22 @@ object DatabricksPlugin extends AutoPlugin {
           |  See the sbt-databricks README for more info.
         """.stripMargin)
     },
+    dbcMemorySize := {
+      sys.error(
+        """
+          |dbcMemorySize not defined. Please make sure to add this key
+          |  to your build when using dbcCreateCluster or dbcResizeCluster
+          |  See the sbt-databricks README for more info.
+        """.stripMargin)
+    },
+    dbcSpotInstance := {
+      sys.error(
+        """
+          |dbcSpotInstance not defined. Please make sure to add this key
+          |  to your build when using dbcCreateCluster
+          |  See the sbt-databricks README for more info.
+        """.stripMargin)
+    },
     dbcClusters := Seq.empty[String],
     dbcRestartOnAttach := true,
     dbcLibraryPath := "/",
@@ -355,12 +412,16 @@ object DatabricksPlugin extends AutoPlugin {
       }
     },
     dbcDeploy := deployImpl.value,
-    dbcExecuteCommand := executeCommandImpl.value
+    dbcExecuteCommand := executeCommandImpl.value,
+    dbcCreateCluster := createClusterImpl.value,
+    dbcDeleteCluster := deleteClusterImpl.value,
+    dbcResizeCluster := resizeClusterImpl.value
   )
 
   override lazy val projectSettings: Seq[Setting[_]] = baseDBCSettings
 }
 
+sealed trait Responses
 case class UploadedLibraryId(id: String)
 case class UploadedLibrary(name: String, jar: File, id: String)
 case class Cluster(
@@ -374,6 +435,7 @@ case class Cluster(
     s"Cluster Name: $name, Status: $status, Number of Workers: $numWorkers."
   }
 }
+case class ClusterId(id: String) extends Responses
 case class LibraryListResult(id: String, name: String, folder: String)
 case class LibraryStatus(
     id: String,
@@ -384,7 +446,8 @@ case class LibraryStatus(
     attachAllClusters: Boolean,
     statuses: List[LibraryClusterStatus])
 case class LibraryClusterStatus(clusterId: String, status: String)
-case class ContextId(id: String)
+case class LibraryId(id: String) extends Responses
+case class ContextId(id: String) extends Responses
 case class ContextStatus(status: String, id: String) {
   override def toString: String = {
     status match {
@@ -395,7 +458,8 @@ case class ContextStatus(status: String, id: String) {
     }
   }
 }
-case class CommandId(id: String)
+case class CommandId(id: String) extends Responses
+case class EmptyResponse() extends Responses
 // This handles only text results - not table results - adjust
 case class CommandResults(
     resultType: String,
