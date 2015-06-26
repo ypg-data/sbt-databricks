@@ -57,7 +57,7 @@ dbcClusters := // See notes below regarding this parameter
 
 Deleting a cluster
 ```scala
-dbcDeleteCluster // Attempts to resize a cluster on DBC
+dbcDeleteCluster // Attempts to delete a cluster on DBC
 // The following parameters must be set when attempting to resize a cluster
 dbcClusters := // See notes below regarding this parameter
 ```
