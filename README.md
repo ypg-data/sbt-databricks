@@ -34,6 +34,34 @@ addSbtPlugin("com.databricks" %% "sbt-databricks" % "0.1.2")
 Usage
 =====
 
+### Cluster Controls
+
+There are three primary cluster related actions: Create, Resize and Delete.
+
+Creating a cluster
+```scala
+dbcCreateCluster // Attempts to create a cluster on DBC
+// The following parameters must be set when attempting to create a cluster
+dbcMemorySize := // The desired size of the cluster (in Gigabytes). Note may change to node numbers.
+dbcSpotInstance := // Boolean for choosing whether to use Spot or On-Demand instances
+dbcClusters := // See notes below regarding this parameter
+```
+
+Resizing a cluster
+```scala
+dbcResizeCluster // Attempts to resize a cluster on DBC
+// The following parameters must be set when attempting to resize a cluster
+dbcMemorySize := // The desired size of the cluster (in Gigabytes). Note may change to node numbers.
+dbcClusters := // See notes below regarding this parameter
+```
+
+Deleting a cluster
+```scala
+dbcDeleteCluster // Attempts to delete a cluster on DBC
+// The following parameters must be set when attempting to resize a cluster
+dbcClusters := // See notes below regarding this parameter
+```
+
 ### Deployment
 
 
